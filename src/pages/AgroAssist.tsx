@@ -508,6 +508,13 @@ const AgroAssist = () => {
           </div>
         </section>
       </main>
+
+      <DiagnosisFlowModal
+        open={diagnosisFlowOpen}
+        onClose={() => setDiagnosisFlowOpen(false)}
+        latestScan={latestScan}
+        language={i18n.language}
+      />
     </div>
   );
 };
