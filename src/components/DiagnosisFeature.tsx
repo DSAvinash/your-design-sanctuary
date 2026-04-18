@@ -18,21 +18,23 @@ const DiagnosisFeature = () => {
         <ScrollReveal direction="right" delay={0.15}>
           <div className="flex flex-col gap-8">
             <span className="font-headline text-xs uppercase tracking-[0.4em] text-secondary font-bold">
-              Advanced Detection
+              Diagnosis + Agronomy AI
             </span>
             <h2 className="font-headline text-5xl md:text-6xl font-bold text-primary tracking-tighter leading-tight">
-              AI Leaf <br />Diagnosis Tool
+              From Leaf Scan <br />to Farm Advice
             </h2>
             <p className="text-lg text-on-surface-variant leading-relaxed max-w-xl">
-              Harness the power of spectral imaging and neural networks to identify crop diseases, nutrient deficiencies, and pest infestations in real-time. Scan your crops with precision.
+              Diagnose crop stress from leaf images, then move directly into a context-aware agronomy assistant for treatment planning, prevention guidance, and weather-smart next steps.
             </p>
-            <Link
-              to="/leaf-diagnosis"
-              className="self-start px-12 py-5 bg-primary text-on-primary font-headline text-xs uppercase tracking-[0.2em] rounded-full hover:bg-primary-container transition-all shadow-lg hover:shadow-xl flex items-center gap-4 group"
-            >
-              <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">biotech</span>
-              Start Diagnosis Scan
-            </Link>
+            <div className="flex flex-wrap gap-4">
+              <Link
+                to="/leaf-diagnosis"
+                className="self-start px-12 py-5 bg-primary text-on-primary font-headline text-xs uppercase tracking-[0.2em] rounded-full hover:bg-primary-container transition-all shadow-lg hover:shadow-xl flex items-center gap-4 group"
+              >
+                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">biotech</span>
+                Start Diagnosis Scan
+              </Link>
+            </div>
           </div>
         </ScrollReveal>
       </div>

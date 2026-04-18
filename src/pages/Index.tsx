@@ -6,6 +6,7 @@ import WheatBreak from "@/components/WheatBreak";
 import PhilosophySection from "@/components/PhilosophySection";
 import NewsletterSection from "@/components/NewsletterSection";
 import Footer from "@/components/Footer";
+import FloatingChatLauncher from "@/components/FloatingChatLauncher";
 
 const Index = () => {
   return (
@@ -20,6 +21,7 @@ const Index = () => {
         <NewsletterSection />
       </main>
       <Footer />
+      <FloatingChatLauncher />
     </div>
   );
 };

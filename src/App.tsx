@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import LeafDiagnosis from "./pages/LeafDiagnosis.tsx";
+import AgroAssist from "./pages/AgroAssist.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -18,6 +19,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/leaf-diagnosis" element={<LeafDiagnosis />} />
+          <Route path="/agro-assist" element={<AgroAssist />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

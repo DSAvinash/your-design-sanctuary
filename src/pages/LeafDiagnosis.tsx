@@ -164,12 +164,20 @@ const LeafDiagnosis = () => {
 
             <div className="flex justify-end items-end">
               {imageDataUrl && (
-                <button
-                  onClick={reset}
-                  className="pointer-events-auto text-on-primary bg-primary/60 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-headline uppercase tracking-widest hover:bg-primary/80 transition-colors"
-                >
-                  {t("diagnosis.newScan")}
-                </button>
+                <div className="pointer-events-auto flex flex-wrap justify-end gap-3">
+                  <Link
+                    to="/agro-assist"
+                    className="text-primary bg-secondary-container px-4 py-2 rounded-full text-xs font-headline uppercase tracking-widest hover:opacity-90 transition-opacity"
+                  >
+                    {t("diagnosis.chatAssist")}
+                  </Link>
+                  <button
+                    onClick={reset}
+                    className="text-on-primary bg-primary/60 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-headline uppercase tracking-widest hover:bg-primary/80 transition-colors"
+                  >
+                    {t("diagnosis.newScan")}
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -333,6 +341,14 @@ const LeafDiagnosis = () => {
               <span className="material-symbols-outlined">{isAnalyzing ? "progress_activity" : "biotech"}</span>
               {isAnalyzing ? t("diagnosis.analyzing") : t("diagnosis.diagnoseNow")}
             </button>
+
+            <Link
+              to="/agro-assist"
+              className="mt-4 flex w-full items-center justify-center gap-3 rounded-2xl border border-outline-variant/50 bg-surface-container-low px-4 py-4 text-center font-headline text-sm font-bold uppercase tracking-[0.2em] text-primary transition-colors hover:bg-surface-container"
+            >
+              <span className="material-symbols-outlined">forum</span>
+              {t("diagnosis.openAssistant")}
+            </Link>
 
             {/* API URL config */}
             <details className="mt-6">
