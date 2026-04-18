@@ -275,8 +275,8 @@ const AgroAssist = () => {
                     <button
                       key={feature.id}
                       type="button"
-                      onClick={() => runFeaturePrompt(feature.prompt)}
-                      disabled={!modelReady || isSending}
+                      onClick={() => runFeaturePrompt(feature.prompt, feature.id)}
+                      disabled={feature.id === "diagnosis" ? false : !modelReady || isSending}
                       className="rounded-full bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.24em] transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {feature.title}
@@ -309,12 +309,12 @@ const AgroAssist = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => runFeaturePrompt(feature.prompt)}
-                  disabled={!modelReady || isSending}
+                  onClick={() => runFeaturePrompt(feature.prompt, feature.id)}
+                  disabled={feature.id === "diagnosis" ? false : !modelReady || isSending}
                   className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-xs font-bold uppercase tracking-[0.22em] text-on-primary disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <span className="material-symbols-outlined text-base">play_arrow</span>
-                  {t("assistant.tryFeature")}
+                  {feature.id === "diagnosis" ? "Start Diagnosis Flow" : t("assistant.tryFeature")}
                 </button>
               </div>
             ))}
