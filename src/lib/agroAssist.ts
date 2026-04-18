@@ -16,6 +16,7 @@ export interface AssistantContext {
 }
 
 export interface AssistantMessage {
+  id?: string;
   role: "assistant" | "user";
   text: string;
 }
