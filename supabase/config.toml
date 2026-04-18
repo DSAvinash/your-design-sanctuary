@@ -2,3 +2,6 @@ project_id = "gcwbtfzkeyufkcdclhnz"
 
 [functions.diagnosis-flow]
 verify_jwt = false
+
+[functions.agro-assist]
+verify_jwt = false
