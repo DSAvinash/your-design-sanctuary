@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import DiagnosisFlowModal from "@/components/DiagnosisFlowModal";
 import { toast } from "@/hooks/use-toast";
 import {
   AssistantMessage,
@@ -31,6 +32,7 @@ const AgroAssist = () => {
   const [suggestions, setSuggestions] = useState(() =>
     getRotatingSuggestions({ latestScan, language: i18n.language }),
   );
+  const [diagnosisFlowOpen, setDiagnosisFlowOpen] = useState(false);
 
   const modelReady = isAiConfigured(settings);
   const featureCards = [
@@ -164,7 +166,12 @@ const AgroAssist = () => {
     void sendMessage(input);
   };
 
-  const runFeaturePrompt = (prompt: string) => {
+  const runFeaturePrompt = (prompt: string, featureId?: string) => {
+    if (featureId === "diagnosis") {
+      setDiagnosisFlowOpen(true);
+      return;
+    }
+
     if (!modelReady) {
       toast({
         title: t("assistant.errorConfigTitle"),
