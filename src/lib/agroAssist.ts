@@ -238,13 +238,32 @@ export async function sendAssistantMessage({
     throw new Error("CONFIG_MISSING");
   }
 
-  const messages = [
-    { role: "system" as const, content: buildSystemPrompt(context) },
+  const systemPrompt = buildSystemPrompt(context);
+  const conversation = [
     ...history.slice(-8).map((message) => ({
       role: message.role,
       content: message.text,
     })),
     { role: "user" as const, content: input },
+  ];
+
+  if (settings.provider === "lovable") {
+    const { data, error } = await supabase.functions.invoke("agro-assist", {
+      body: { system: systemPrompt, messages: conversation },
+    });
+    if (error) {
+      console.error("agro-assist invoke error", error);
+      throw new Error("API_ERROR");
+    }
+    if (data?.error) throw new Error(data.error);
+    const content: string = (data?.reply ?? "").toString().trim();
+    if (!content) throw new Error("EMPTY_RESPONSE");
+    return content;
+  }
+
+  const messages = [
+    { role: "system" as const, content: systemPrompt },
+    ...conversation,
   ];
 
   if (settings.provider === "ollama") {
