@@ -1,4 +1,5 @@
 import { DiagnosisResult, ScanRecord, normalizeConfidence } from "@/lib/diagnosis";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface QuickAction {
   id: string;
@@ -21,7 +22,7 @@ export interface AssistantMessage {
   text: string;
 }
 
-export type AiProvider = "openai" | "ollama";
+export type AiProvider = "lovable" | "openai" | "ollama";
 
 export interface AgroAssistSettings {
   provider: AiProvider;
@@ -69,13 +70,19 @@ function trimTrailingSlash(value: string) {
 }
 
 function envSettings(): AgroAssistSettings {
-  const provider = ((import.meta.env.VITE_AI_PROVIDER as string | undefined) ?? "openai").toLowerCase();
+  const provider = ((import.meta.env.VITE_AI_PROVIDER as string | undefined) ?? "lovable").toLowerCase();
+  const normalized: AiProvider =
+    provider === "ollama" ? "ollama" : provider === "openai" ? "openai" : "lovable";
 
   return {
-    provider: provider === "ollama" ? "ollama" : "openai",
+    provider: normalized,
     baseUrl:
       (import.meta.env.VITE_AI_BASE_URL as string | undefined) ??
-      (provider === "ollama" ? "http://localhost:11434" : "https://api.openai.com/v1"),
+      (normalized === "ollama"
+        ? "http://localhost:11434"
+        : normalized === "openai"
+          ? "https://api.openai.com/v1"
+          : ""),
     model: (import.meta.env.VITE_AI_MODEL as string | undefined) ?? "",
     apiKey: (import.meta.env.VITE_AI_API_KEY as string | undefined) ?? "",
   };
@@ -91,8 +98,16 @@ export function getAiSettings(): AgroAssistSettings {
     if (!raw) return defaults;
 
     const parsed = JSON.parse(raw) as Partial<AgroAssistSettings>;
-    const merged = {
-      provider: parsed.provider === "ollama" ? "ollama" : defaults.provider,
+    const provider: AiProvider =
+      parsed.provider === "ollama"
+        ? "ollama"
+        : parsed.provider === "openai"
+          ? "openai"
+          : parsed.provider === "lovable"
+            ? "lovable"
+            : defaults.provider;
+    const merged: AgroAssistSettings = {
+      provider,
       baseUrl: parsed.baseUrl?.trim() || defaults.baseUrl,
       model: parsed.model?.trim() || defaults.model,
       apiKey: parsed.apiKey?.trim() || defaults.apiKey,
@@ -109,6 +124,9 @@ export function setAiSettings(settings: AgroAssistSettings) {
 }
 
 export function isAiConfigured(settings: AgroAssistSettings) {
+  // Lovable AI Gateway is always available via the edge function (no user setup needed).
+  if (settings.provider === "lovable") return true;
+
   const hasBaseUrl = settings.baseUrl.trim().length > 0;
   const hasModel = settings.model.trim().length > 0;
   const hasKey = settings.provider === "ollama" || settings.apiKey.trim().length > 0;
