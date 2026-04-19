@@ -94,6 +94,18 @@ export function getAiSettings(): AgroAssistSettings {
 
   if (typeof window === "undefined") return defaults;
 
+  // One-time migration: clear any pre-Lovable-Gateway stored config so the
+  // built-in Lovable AI provider becomes the default for existing users.
+  try {
+    if (!window.localStorage.getItem(AI_SETTINGS_MIGRATION_KEY)) {
+      window.localStorage.removeItem(AI_SETTINGS_KEY);
+      window.localStorage.setItem(AI_SETTINGS_MIGRATION_KEY, "1");
+      return defaults;
+    }
+  } catch {
+    // ignore storage errors
+  }
+
   try {
     const raw = window.localStorage.getItem(AI_SETTINGS_KEY);
     if (!raw) return defaults;
