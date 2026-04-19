@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.agro-assist]
 verify_jwt = false
+
+[functions.treatment-engine]
+verify_jwt = false
