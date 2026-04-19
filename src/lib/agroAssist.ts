@@ -32,6 +32,7 @@ export interface AgroAssistSettings {
 }
 
 const AI_SETTINGS_KEY = "AGROASSIST_AI_SETTINGS";
+const AI_SETTINGS_MIGRATION_KEY = "AGROASSIST_AI_SETTINGS_MIGRATED_V2";
 
 const cropKeywords = [
   "tomato",
