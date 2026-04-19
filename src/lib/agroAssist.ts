@@ -32,6 +32,7 @@ export interface AgroAssistSettings {
 }
 
 const AI_SETTINGS_KEY = "AGROASSIST_AI_SETTINGS";
+const AI_SETTINGS_MIGRATION_KEY = "AGROASSIST_AI_SETTINGS_MIGRATED_V2";
 
 const cropKeywords = [
   "tomato",
@@ -92,6 +93,18 @@ export function getAiSettings(): AgroAssistSettings {
   const defaults = envSettings();
 
   if (typeof window === "undefined") return defaults;
+
+  // One-time migration: clear any pre-Lovable-Gateway stored config so the
+  // built-in Lovable AI provider becomes the default for existing users.
+  try {
+    if (!window.localStorage.getItem(AI_SETTINGS_MIGRATION_KEY)) {
+      window.localStorage.removeItem(AI_SETTINGS_KEY);
+      window.localStorage.setItem(AI_SETTINGS_MIGRATION_KEY, "1");
+      return defaults;
+    }
+  } catch {
+    // ignore storage errors
+  }
 
   try {
     const raw = window.localStorage.getItem(AI_SETTINGS_KEY);
