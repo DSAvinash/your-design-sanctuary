@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import DiagnosisFlowModal from "@/components/DiagnosisFlowModal";
+import TreatmentEngineModal from "@/components/TreatmentEngineModal";
 import { toast } from "@/hooks/use-toast";
 import {
   AssistantMessage,
@@ -33,6 +34,7 @@ const AgroAssist = () => {
     getRotatingSuggestions({ latestScan, language: i18n.language }),
   );
   const [diagnosisFlowOpen, setDiagnosisFlowOpen] = useState(false);
+  const [treatmentEngineOpen, setTreatmentEngineOpen] = useState(false);
 
   const modelReady = isAiConfigured(settings);
   const featureCards = [
@@ -169,6 +171,11 @@ const AgroAssist = () => {
   const runFeaturePrompt = (prompt: string, featureId?: string) => {
     if (featureId === "diagnosis") {
       setDiagnosisFlowOpen(true);
+      return;
+    }
+
+    if (featureId === "treatment") {
+      setTreatmentEngineOpen(true);
       return;
     }
 
