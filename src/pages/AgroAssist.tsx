@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import DiagnosisFlowModal from "@/components/DiagnosisFlowModal";
 import TreatmentEngineModal from "@/components/TreatmentEngineModal";
+import WeatherAdviceModal from "@/components/WeatherAdviceModal";
 import { toast } from "@/hooks/use-toast";
 import {
   AssistantMessage,
@@ -35,6 +36,7 @@ const AgroAssist = () => {
   );
   const [diagnosisFlowOpen, setDiagnosisFlowOpen] = useState(false);
   const [treatmentEngineOpen, setTreatmentEngineOpen] = useState(false);
+  const [weatherAdviceOpen, setWeatherAdviceOpen] = useState(false);
 
   const modelReady = isAiConfigured(settings);
   const featureCards = [
@@ -176,6 +178,11 @@ const AgroAssist = () => {
 
     if (featureId === "treatment") {
       setTreatmentEngineOpen(true);
+      return;
+    }
+
+    if (featureId === "weather") {
+      setWeatherAdviceOpen(true);
       return;
     }
 

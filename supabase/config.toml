@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.treatment-engine]
 verify_jwt = false
+
+[functions.weather-advice]
+verify_jwt = false
