@@ -41,9 +41,6 @@ const HeroSection = () => {
           >
             Launch Leaf Diagnosis
           </Link>
-          <button className="px-10 py-5 bg-surface text-primary font-headline text-xs uppercase tracking-widest rounded-md hover:scale-95 transition-transform duration-200">
-            View Our Soil
-          </button>
         </motion.div>
       </div>
     </section>

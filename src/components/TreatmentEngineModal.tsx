@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { CROPS } from "@/lib/cropKnowledge";
 import { ScanRecord } from "@/lib/diagnosis";
@@ -22,6 +23,7 @@ interface Props {
 }
 
 interface TreatmentResponse {
+  error?: string;
   crop: string;
   disease: string;
   severity: Severity;
@@ -135,14 +137,42 @@ export default function TreatmentEngineModal({ open, onOpenChange, latestScan, l
           language,
         },
       });
-      if (error) throw new Error(error.message);
-      if (data?.error) {
-        setErrorMsg(data.error);
-        setResult(data as TreatmentResponse);
+
+      // Edge function uses 4xx for validation / not-found with a JSON body; supabase-js surfaces that as FunctionsHttpError.
+      let payload: TreatmentResponse | null = (data as TreatmentResponse | null) ?? null;
+      if (error) {
+        if (error instanceof FunctionsHttpError && error.context) {
+          try {
+            const body = await error.context.json();
+            if (body && typeof body === "object" && !Array.isArray(body)) {
+              payload = body as TreatmentResponse;
+            }
+          } catch {
+            /* body not JSON */
+          }
+        }
+        if (!payload) {
+          throw error instanceof Error ? error : new Error(String(error));
+        }
+      }
+
+      if (!payload) {
+        toast({
+          title: "Treatment Engine failed",
+          description: "Empty response from server.",
+          variant: "destructive",
+        });
+        setStep("intake");
+        return;
+      }
+
+      if (payload.error) {
+        setErrorMsg(payload.error);
+        setResult(payload);
         setStep("result");
         return;
       }
-      setResult(data as TreatmentResponse);
+      setResult(payload);
       setStep("result");
     } catch (e) {
       console.error(e);
