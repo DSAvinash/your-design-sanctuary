@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import DiagnosisFlowModal from "@/components/DiagnosisFlowModal";
 import TreatmentEngineModal from "@/components/TreatmentEngineModal";
+import WeatherAdviceModal from "@/components/WeatherAdviceModal";
 import { toast } from "@/hooks/use-toast";
 import {
   AssistantMessage,
@@ -35,6 +36,7 @@ const AgroAssist = () => {
   );
   const [diagnosisFlowOpen, setDiagnosisFlowOpen] = useState(false);
   const [treatmentEngineOpen, setTreatmentEngineOpen] = useState(false);
+  const [weatherAdviceOpen, setWeatherAdviceOpen] = useState(false);
 
   const modelReady = isAiConfigured(settings);
   const featureCards = [
@@ -179,6 +181,11 @@ const AgroAssist = () => {
       return;
     }
 
+    if (featureId === "weather") {
+      setWeatherAdviceOpen(true);
+      return;
+    }
+
     if (!modelReady) {
       toast({
         title: t("assistant.errorConfigTitle"),
@@ -283,7 +290,7 @@ const AgroAssist = () => {
                       key={feature.id}
                       type="button"
                       onClick={() => runFeaturePrompt(feature.prompt, feature.id)}
-                      disabled={feature.id === "diagnosis" || feature.id === "treatment" ? false : !modelReady || isSending}
+                      disabled={["diagnosis", "treatment", "weather"].includes(feature.id) ? false : !modelReady || isSending}
                       className="rounded-full bg-white/10 px-4 py-2 text-xs uppercase tracking-[0.24em] transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {feature.title}
@@ -317,7 +324,7 @@ const AgroAssist = () => {
                 <button
                   type="button"
                   onClick={() => runFeaturePrompt(feature.prompt, feature.id)}
-                  disabled={feature.id === "diagnosis" || feature.id === "treatment" ? false : !modelReady || isSending}
+                  disabled={["diagnosis", "treatment", "weather"].includes(feature.id) ? false : !modelReady || isSending}
                   className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-xs font-bold uppercase tracking-[0.22em] text-on-primary disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <span className="material-symbols-outlined text-base">play_arrow</span>
@@ -325,7 +332,9 @@ const AgroAssist = () => {
                     ? "Start Diagnosis Flow"
                     : feature.id === "treatment"
                       ? "Open Treatment Engine"
-                      : t("assistant.tryFeature")}
+                      : feature.id === "weather"
+                        ? "Open Weather Advice"
+                        : t("assistant.tryFeature")}
                 </button>
               </div>
             ))}
@@ -531,6 +540,12 @@ const AgroAssist = () => {
         open={treatmentEngineOpen}
         onOpenChange={setTreatmentEngineOpen}
         latestScan={latestScan}
+        language={i18n.language}
+      />
+
+      <WeatherAdviceModal
+        open={weatherAdviceOpen}
+        onOpenChange={setWeatherAdviceOpen}
         language={i18n.language}
       />
     </div>
