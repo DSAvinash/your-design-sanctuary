@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.weather-advice]
 verify_jwt = false
+
+[functions.unified-advisory]
+verify_jwt = false
+
+[functions.send-alert]
+verify_jwt = false
