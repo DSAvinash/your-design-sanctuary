@@ -7,6 +7,7 @@ import PhilosophySection from "@/components/PhilosophySection";
 import NewsletterSection from "@/components/NewsletterSection";
 import Footer from "@/components/Footer";
 import FloatingChatLauncher from "@/components/FloatingChatLauncher";
+import TodaysPlanWidget from "@/components/TodaysPlanWidget";
 
 const Index = () => {
   return (
@@ -14,6 +15,7 @@ const Index = () => {
       <Navbar />
       <main>
         <HeroSection />
+        <TodaysPlanWidget />
         <StatsSection />
         <DiagnosisFeature />
         <WheatBreak />
