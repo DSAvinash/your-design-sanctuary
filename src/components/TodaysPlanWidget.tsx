@@ -4,8 +4,6 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { loadScans } from "@/lib/diagnosis";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import {
   CloudRain,
@@ -15,8 +13,9 @@ import {
   MapPin,
   Loader2,
   RefreshCw,
-  MessageCircle,
-  Phone,
+  Clipboard,
+  Download,
+  Share2,
 } from "lucide-react";
 
 type RiskLevel = "low" | "medium" | "high";
@@ -44,7 +43,6 @@ interface AdvisoryResponse {
 }
 
 const COORDS_KEY = "agrovision.todaysplan.coords";
-const PHONE_KEY = "agrovision.todaysplan.phone";
 
 const riskColor: Record<RiskLevel, string> = {
   low: "bg-emerald-100 text-emerald-800 border-emerald-200",
@@ -70,8 +68,6 @@ export default function TodaysPlanWidget() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<AdvisoryResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [phone, setPhone] = useState(() => localStorage.getItem(PHONE_KEY) ?? "");
-  const [sending, setSending] = useState<"sms" | "whatsapp" | null>(null);
 
   const fetchPlan = async (c: { lat: number; lon: number }) => {
     setLoading(true);
@@ -156,53 +152,41 @@ export default function TodaysPlanWidget() {
     return lines.filter(Boolean).join("\n").slice(0, 1400);
   };
 
-  const sendAlert = async (channel: "sms" | "whatsapp") => {
-    if (!/^\+\d{8,15}$/.test(phone.trim())) {
-      toast({
-        title: "Invalid phone number",
-        description: "Use international format like +919876543210",
-        variant: "destructive",
-      });
-      return;
-    }
+  const copyPlan = async () => {
     if (!data) return;
-    setSending(channel);
     try {
-      localStorage.setItem(PHONE_KEY, phone.trim());
-      const { data: res, error } = await supabase.functions.invoke("send-alert", {
-        body: { to: phone.trim(), channel, message: composeMessage() },
-      });
-      let payload: { success?: boolean; error?: string } | null = res ?? null;
-      if (error) {
-        if (error instanceof FunctionsHttpError && error.context) {
-          try {
-            payload = await error.context.json();
-          } catch {
-            payload = null;
-          }
-        }
-
-        toast({
-          title: "Could not send",
-          description: payload?.error ?? error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-      if (payload?.error || !payload?.success) {
-        toast({ title: "Could not send", description: payload?.error ?? "Unknown send error", variant: "destructive" });
-        return;
-      }
-      toast({ title: `Sent via ${channel === "whatsapp" ? "WhatsApp" : "SMS"}` });
+      await navigator.clipboard.writeText(composeMessage());
+      toast({ title: "Plan copied" });
     } catch (e) {
-      toast({
-        title: "Send failed",
-        description: e instanceof Error ? e.message : "Unknown error",
-        variant: "destructive",
-      });
-    } finally {
-      setSending(null);
+      console.error(e);
+      toast({ title: "Copy failed", variant: "destructive" });
     }
+  };
+
+  const sharePlan = async () => {
+    if (!data) return;
+    const message = composeMessage();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "AgroVision Today's Plan", text: message });
+        return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+      }
+    }
+    await copyPlan();
+  };
+
+  const downloadPlan = () => {
+    if (!data) return;
+    const blob = new Blob([composeMessage()], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `agrovision-todays-plan-${new Date(data.generatedAt).toISOString().slice(0, 10)}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Plan downloaded" });
   };
 
   return (
@@ -303,49 +287,24 @@ export default function TodaysPlanWidget() {
               </ol>
             </div>
 
-            {/* Alert send */}
+            {/* Plan actions */}
             <div className="rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-4">
               <p className="mb-2 font-headline text-sm font-bold uppercase tracking-[0.18em] text-primary">
-                Send to my phone
+                Save or share plan
               </p>
               <div className="flex flex-col gap-2 md:flex-row">
-                <div className="flex-1">
-                  <Label htmlFor="phone" className="sr-only">
-                    Phone
-                  </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+919876543210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => sendAlert("sms")}
-                  disabled={sending !== null}
-                  className="md:w-32"
-                >
-                  {sending === "sms" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="mr-1 h-4 w-4" />}
-                  SMS
+                <Button variant="outline" onClick={copyPlan} className="justify-start md:flex-1">
+                  <Clipboard className="mr-2 h-4 w-4" /> Copy
                 </Button>
-                <Button
-                  onClick={() => sendAlert("whatsapp")}
-                  disabled={sending !== null}
-                  className="md:w-36"
-                >
-                  {sending === "whatsapp" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <MessageCircle className="mr-1 h-4 w-4" />
-                  )}
-                  WhatsApp
+                <Button variant="outline" onClick={downloadPlan} className="justify-start md:flex-1">
+                  <Download className="mr-2 h-4 w-4" /> Download
+                </Button>
+                <Button onClick={sharePlan} className="justify-start md:flex-1">
+                  <Share2 className="mr-2 h-4 w-4" /> Share
                 </Button>
               </div>
               <p className="mt-2 text-xs text-on-surface-variant">
-                Use international format (E.164). For WhatsApp, your number must be opted in to the
-                Twilio sandbox or approved sender.
+                Copy the field brief, save it offline, or share it through apps already on your device.
               </p>
             </div>
 
