@@ -89,12 +89,19 @@ Deno.serve(async (req) => {
     const data = await res.json();
     if (!res.ok) {
       console.error("Twilio error", res.status, data);
+      const code = data?.code;
+      const sameNumberError = code === 21266 || code === 63031;
+
       return new Response(
         JSON.stringify({
-          error: `Twilio error: ${data?.message ?? res.statusText}`,
-          code: data?.code,
+          success: false,
+          fallback: true,
+          error: sameNumberError
+            ? "Cannot send this alert to the Twilio sender number. Please use a different recipient number."
+            : `Twilio error: ${data?.message ?? res.statusText}`,
+          code,
         }),
-        { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
