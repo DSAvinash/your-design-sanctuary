@@ -330,17 +330,25 @@ export default function TodaysPlanWidget() {
                   </PopoverTrigger>
                   <PopoverContent align="end" className="w-56 p-2">
                     <div className="flex flex-col gap-1">
-                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("whatsapp")}>
-                        <MessageCircle className="mr-2 h-4 w-4 text-emerald-600" /> WhatsApp
+                      <Button variant="ghost" className="justify-start" asChild>
+                        <a href={shareUrls?.whatsapp} target="_blank" rel="noopener noreferrer">
+                          <MessageCircle className="mr-2 h-4 w-4 text-emerald-600" /> WhatsApp
+                        </a>
                       </Button>
-                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("telegram")}>
-                        <Send className="mr-2 h-4 w-4 text-sky-600" /> Telegram
+                      <Button variant="ghost" className="justify-start" asChild>
+                        <a href={shareUrls?.telegram} target="_blank" rel="noopener noreferrer">
+                          <Send className="mr-2 h-4 w-4 text-sky-600" /> Telegram
+                        </a>
                       </Button>
-                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("email")}>
-                        <Mail className="mr-2 h-4 w-4 text-primary" /> Email
+                      <Button variant="ghost" className="justify-start" asChild>
+                        <a href={shareUrls?.email} target="_blank" rel="noopener noreferrer">
+                          <Mail className="mr-2 h-4 w-4 text-primary" /> Email
+                        </a>
                       </Button>
-                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("sms")}>
-                        <Phone className="mr-2 h-4 w-4 text-primary" /> SMS app
+                      <Button variant="ghost" className="justify-start" asChild>
+                        <a href={shareUrls?.sms}>
+                          <Phone className="mr-2 h-4 w-4 text-primary" /> SMS app
+                        </a>
                       </Button>
                       <Button variant="ghost" className="justify-start" onClick={sharePlan}>
                         <Share2 className="mr-2 h-4 w-4" /> More…
