@@ -36,12 +36,17 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
-    const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
-    if (!TWILIO_FROM)
-      return new Response(JSON.stringify({ error: "TWILIO_FROM_NUMBER not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER")?.trim();
+    if (!TWILIO_FROM || !/^\+\d{8,15}$/.test(TWILIO_FROM))
+      return new Response(
+        JSON.stringify({
+          error: "TWILIO_FROM_NUMBER must be a valid Twilio sender number in E.164 format, e.g. +15017122661.",
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
 
     const body = (await req.json()) as Body;
     const { to, channel = "sms", message } = body ?? {};
