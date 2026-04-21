@@ -182,28 +182,23 @@ export default function TodaysPlanWidget() {
     await copyPlan();
   };
 
-  const shareVia = (target: "whatsapp" | "telegram" | "email" | "sms") => {
-    if (!data) return;
+  const shareUrls = (() => {
+    if (!data) return null;
     const message = composeMessage();
     const encoded = encodeURIComponent(message);
     const subject = encodeURIComponent("AgroVision — Today's Plan");
-    const urls: Record<typeof target, string> = {
-      whatsapp: `https://wa.me/?text=${encoded}`,
+    const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    return {
+      // wa.me redirects desktop browsers to api.whatsapp.com which blocks iframe embedding.
+      // web.whatsapp.com works directly on desktop; wa.me is best on mobile.
+      whatsapp: isMobile
+        ? `https://wa.me/?text=${encoded}`
+        : `https://web.whatsapp.com/send?text=${encoded}`,
       telegram: `https://t.me/share/url?url=${encodeURIComponent("https://agrovision.app")}&text=${encoded}`,
       email: `mailto:?subject=${subject}&body=${encoded}`,
       sms: `sms:?&body=${encoded}`,
     };
-    const url = urls[target];
-    // Break out of iframe sandboxes (e.g. Lovable preview) — WhatsApp/Telegram
-    // refuse to load inside iframes (ERR_BLOCKED_BY_RESPONSE).
-    const top = window.top ?? window;
-    try {
-      const opened = top.open(url, "_blank", "noopener,noreferrer");
-      if (!opened) top.location.href = url;
-    } catch {
-      window.location.href = url;
-    }
-  };
+  })();
 
   const downloadPlan = () => {
     if (!data) return;
