@@ -40,10 +40,11 @@ Deno.serve(async (req) => {
     if (!TWILIO_FROM || !/^\+\d{8,15}$/.test(TWILIO_FROM))
       return new Response(
         JSON.stringify({
-          error: "TWILIO_FROM_NUMBER must be a valid Twilio sender number in E.164 format, e.g. +15017122661.",
+          success: false,
+          error: "SMS is not configured yet. Set TWILIO_FROM_NUMBER to a real Twilio sender phone number like +15017122661.",
         }),
         {
-          status: 500,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
