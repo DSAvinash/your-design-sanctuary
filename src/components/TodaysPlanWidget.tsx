@@ -182,6 +182,20 @@ export default function TodaysPlanWidget() {
     await copyPlan();
   };
 
+  const shareVia = (target: "whatsapp" | "telegram" | "email" | "sms") => {
+    if (!data) return;
+    const message = composeMessage();
+    const encoded = encodeURIComponent(message);
+    const subject = encodeURIComponent("AgroVision — Today's Plan");
+    const urls: Record<typeof target, string> = {
+      whatsapp: `https://wa.me/?text=${encoded}`,
+      telegram: `https://t.me/share/url?url=${encodeURIComponent("https://agrovision.app")}&text=${encoded}`,
+      email: `mailto:?subject=${subject}&body=${encoded}`,
+      sms: `sms:?&body=${encoded}`,
+    };
+    window.open(urls[target], "_blank", "noopener,noreferrer");
+  };
+
   const downloadPlan = () => {
     if (!data) return;
     const blob = new Blob([composeMessage()], { type: "text/plain;charset=utf-8" });
@@ -304,9 +318,32 @@ export default function TodaysPlanWidget() {
                 <Button variant="outline" onClick={downloadPlan} className="justify-start md:flex-1">
                   <Download className="mr-2 h-4 w-4" /> Download
                 </Button>
-                <Button onClick={sharePlan} className="justify-start md:flex-1">
-                  <Share2 className="mr-2 h-4 w-4" /> Share
-                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button className="justify-start md:flex-1">
+                      <Share2 className="mr-2 h-4 w-4" /> Share
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-56 p-2">
+                    <div className="flex flex-col gap-1">
+                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("whatsapp")}>
+                        <MessageCircle className="mr-2 h-4 w-4 text-emerald-600" /> WhatsApp
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("telegram")}>
+                        <Send className="mr-2 h-4 w-4 text-sky-600" /> Telegram
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("email")}>
+                        <Mail className="mr-2 h-4 w-4 text-primary" /> Email
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("sms")}>
+                        <Phone className="mr-2 h-4 w-4 text-primary" /> SMS app
+                      </Button>
+                      <Button variant="ghost" className="justify-start" onClick={sharePlan}>
+                        <Share2 className="mr-2 h-4 w-4" /> More…
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
               <p className="mt-2 text-xs text-on-surface-variant">
                 Copy the field brief, save it offline, or share it through apps already on your device.
