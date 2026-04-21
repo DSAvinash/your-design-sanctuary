@@ -193,7 +193,16 @@ export default function TodaysPlanWidget() {
       email: `mailto:?subject=${subject}&body=${encoded}`,
       sms: `sms:?&body=${encoded}`,
     };
-    window.open(urls[target], "_blank", "noopener,noreferrer");
+    const url = urls[target];
+    // Break out of iframe sandboxes (e.g. Lovable preview) — WhatsApp/Telegram
+    // refuse to load inside iframes (ERR_BLOCKED_BY_RESPONSE).
+    const top = window.top ?? window;
+    try {
+      const opened = top.open(url, "_blank", "noopener,noreferrer");
+      if (!opened) top.location.href = url;
+    } catch {
+      window.location.href = url;
+    }
   };
 
   const downloadPlan = () => {
