@@ -178,13 +178,19 @@ export default function TodaysPlanWidget() {
           try {
             payload = await error.context.json();
           } catch {
-            /* */
+            payload = null;
           }
         }
-        if (!payload?.success) throw error;
+
+        toast({
+          title: "Could not send",
+          description: payload?.error ?? error.message,
+          variant: "destructive",
+        });
+        return;
       }
-      if (payload?.error) {
-        toast({ title: "Could not send", description: payload.error, variant: "destructive" });
+      if (payload?.error || !payload?.success) {
+        toast({ title: "Could not send", description: payload?.error ?? "Unknown send error", variant: "destructive" });
         return;
       }
       toast({ title: `Sent via ${channel === "whatsapp" ? "WhatsApp" : "SMS"}` });
