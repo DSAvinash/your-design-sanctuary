@@ -182,28 +182,23 @@ export default function TodaysPlanWidget() {
     await copyPlan();
   };
 
-  const shareVia = (target: "whatsapp" | "telegram" | "email" | "sms") => {
-    if (!data) return;
+  const shareUrls = (() => {
+    if (!data) return null;
     const message = composeMessage();
     const encoded = encodeURIComponent(message);
     const subject = encodeURIComponent("AgroVision — Today's Plan");
-    const urls: Record<typeof target, string> = {
-      whatsapp: `https://wa.me/?text=${encoded}`,
+    const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    return {
+      // wa.me redirects desktop browsers to api.whatsapp.com which blocks iframe embedding.
+      // web.whatsapp.com works directly on desktop; wa.me is best on mobile.
+      whatsapp: isMobile
+        ? `https://wa.me/?text=${encoded}`
+        : `https://web.whatsapp.com/send?text=${encoded}`,
       telegram: `https://t.me/share/url?url=${encodeURIComponent("https://agrovision.app")}&text=${encoded}`,
       email: `mailto:?subject=${subject}&body=${encoded}`,
       sms: `sms:?&body=${encoded}`,
     };
-    const url = urls[target];
-    // Break out of iframe sandboxes (e.g. Lovable preview) — WhatsApp/Telegram
-    // refuse to load inside iframes (ERR_BLOCKED_BY_RESPONSE).
-    const top = window.top ?? window;
-    try {
-      const opened = top.open(url, "_blank", "noopener,noreferrer");
-      if (!opened) top.location.href = url;
-    } catch {
-      window.location.href = url;
-    }
-  };
+  })();
 
   const downloadPlan = () => {
     if (!data) return;
@@ -335,17 +330,25 @@ export default function TodaysPlanWidget() {
                   </PopoverTrigger>
                   <PopoverContent align="end" className="w-56 p-2">
                     <div className="flex flex-col gap-1">
-                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("whatsapp")}>
-                        <MessageCircle className="mr-2 h-4 w-4 text-emerald-600" /> WhatsApp
+                      <Button variant="ghost" className="justify-start" asChild>
+                        <a href={shareUrls?.whatsapp} target="_blank" rel="noopener noreferrer">
+                          <MessageCircle className="mr-2 h-4 w-4 text-emerald-600" /> WhatsApp
+                        </a>
                       </Button>
-                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("telegram")}>
-                        <Send className="mr-2 h-4 w-4 text-sky-600" /> Telegram
+                      <Button variant="ghost" className="justify-start" asChild>
+                        <a href={shareUrls?.telegram} target="_blank" rel="noopener noreferrer">
+                          <Send className="mr-2 h-4 w-4 text-sky-600" /> Telegram
+                        </a>
                       </Button>
-                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("email")}>
-                        <Mail className="mr-2 h-4 w-4 text-primary" /> Email
+                      <Button variant="ghost" className="justify-start" asChild>
+                        <a href={shareUrls?.email} target="_blank" rel="noopener noreferrer">
+                          <Mail className="mr-2 h-4 w-4 text-primary" /> Email
+                        </a>
                       </Button>
-                      <Button variant="ghost" className="justify-start" onClick={() => shareVia("sms")}>
-                        <Phone className="mr-2 h-4 w-4 text-primary" /> SMS app
+                      <Button variant="ghost" className="justify-start" asChild>
+                        <a href={shareUrls?.sms}>
+                          <Phone className="mr-2 h-4 w-4 text-primary" /> SMS app
+                        </a>
                       </Button>
                       <Button variant="ghost" className="justify-start" onClick={sharePlan}>
                         <Share2 className="mr-2 h-4 w-4" /> More…
