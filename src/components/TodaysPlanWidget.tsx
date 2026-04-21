@@ -4,6 +4,7 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { loadScans } from "@/lib/diagnosis";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
 import {
   CloudRain,
@@ -16,6 +17,10 @@ import {
   Clipboard,
   Download,
   Share2,
+  MessageCircle,
+  Send,
+  Mail,
+  Phone,
 } from "lucide-react";
 
 type RiskLevel = "low" | "medium" | "high";
