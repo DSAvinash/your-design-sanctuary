@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
+import authBackground from "@/assets/auth-background.png";
 
 export default function Auth() {
   const { session, loading: authLoading } = useAuth();
@@ -63,9 +64,12 @@ export default function Auth() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background">
-      {/* Background gradient overlay */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-secondary-container/30 via-transparent to-primary/10" />
+    <div
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${authBackground})` }}
+    >
+      {/* Soft overlay for legibility */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-background/30 via-background/10 to-background/40" />
 
       {/* Card */}
       <div className="relative z-10 mx-4 w-full max-w-md rounded-3xl border border-outline-variant/30 bg-surface-container-lowest/80 p-8 shadow-[0_24px_60px_rgba(40,45,26,0.12)] backdrop-blur-xl md:p-10">
