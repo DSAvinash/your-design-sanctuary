@@ -130,7 +130,7 @@ async function checkAuth(supabase: ReturnType<typeof createClient>): Promise<Hea
 async function checkDatabase(supabase: ReturnType<typeof createClient>): Promise<HealthCheckResult["checks"]["database"]> {
   const start = Date.now();
   try {
-    const { error } = await supabase.rpc("touch_updated_at");
+    const { error } = await supabase.from("profiles").select("*", { head: true, count: "exact" });
     if (error) {
       return {
         status: "unhealthy",
