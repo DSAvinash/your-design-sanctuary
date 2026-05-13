@@ -73,13 +73,13 @@ export function SystemHealthBanner() {
         <div className="flex items-center gap-2 shrink-0">
           <div className="hidden sm:flex items-center gap-2">
             {health.checks.auth.status === "unhealthy" && (
-              <ShieldAlert className={`h-3.5 w-3.5 ${colors.icon}`} title="Auth" />
+              <ShieldAlert className={`h-3.5 w-3.5 ${colors.icon}`} />
             )}
             {health.checks.database.status === "unhealthy" && (
-              <Database className={`h-3.5 w-3.5 ${colors.icon}`} title="Database" />
+              <Database className={`h-3.5 w-3.5 ${colors.icon}`} />
             )}
             {health.checks.edgeFunctions.status === "unhealthy" && (
-              <Server className={`h-3.5 w-3.5 ${colors.icon}`} title="Edge Functions" />
+              <Server className={`h-3.5 w-3.5 ${colors.icon}`} />
             )}
           </div>
           <button
