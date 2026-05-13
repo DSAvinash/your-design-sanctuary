@@ -8,11 +8,13 @@ import NewsletterSection from "@/components/NewsletterSection";
 import Footer from "@/components/Footer";
 import FloatingChatLauncher from "@/components/FloatingChatLauncher";
 import TodaysPlanWidget from "@/components/TodaysPlanWidget";
+import { SystemHealthBanner } from "@/components/SystemHealthBanner";
 
 const Index = () => {
   return (
     <div className="bg-surface scroll-smooth">
       <Navbar />
+      <SystemHealthBanner />
       <main>
         <HeroSection />
         <TodaysPlanWidget />
