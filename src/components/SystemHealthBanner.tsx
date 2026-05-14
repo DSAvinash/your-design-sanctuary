@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, X, Server, Database, ShieldAlert } from "lucide-react";
+import { AlertTriangle, X, Server, Database, ShieldAlert, RefreshCw } from "lucide-react";
 import { useHealthCheck, type HealthCheck } from "@/hooks/useHealthCheck";
 
 function getStatusColor(status: HealthCheck["status"]) {
@@ -43,8 +43,9 @@ function formatErrorDetail(health: HealthCheck): string {
 }
 
 export function SystemHealthBanner() {
-  const { health, loading } = useHealthCheck();
+  const { health, loading, refetch } = useHealthCheck();
   const [dismissed, setDismissed] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   if (loading || !health) return null;
   if (health.status === "healthy") return null;
@@ -52,6 +53,12 @@ export function SystemHealthBanner() {
 
   const colors = getStatusColor(health.status);
   const isDegraded = health.status === "degraded";
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    await refetch();
+    setRetrying(false);
+  };
 
   return (
     <div
@@ -82,6 +89,16 @@ export function SystemHealthBanner() {
               <Server className={`h-3.5 w-3.5 ${colors.icon}`} />
             )}
           </div>
+          <button
+            onClick={handleRetry}
+            disabled={retrying}
+            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border ${colors.border} hover:bg-black/5 transition-colors ${colors.text} disabled:opacity-50 disabled:cursor-not-allowed`}
+            aria-label="Retry health check"
+            title="Retry health check"
+          >
+            <RefreshCw className={`h-3 w-3 ${retrying ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">{retrying ? "Checking..." : "Retry"}</span>
+          </button>
           <button
             onClick={() => setDismissed(true)}
             className={`p-1 rounded hover:bg-black/5 transition-colors ${colors.text}`}
