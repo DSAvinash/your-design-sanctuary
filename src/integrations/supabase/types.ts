@@ -41,6 +41,63 @@ export type Database = {
         }
         Relationships: []
       }
+      plant_diseases: {
+        Row: {
+          active_months: number[]
+          created_at: string
+          crop: string
+          description: string
+          dew_point_max_c: number | null
+          dew_point_min_c: number | null
+          humidity_max: number
+          humidity_min: number
+          id: string
+          name: string
+          prevention: string
+          temperature_max_c: number
+          temperature_min_c: number
+          type: string
+          wikipedia: string | null
+          wind_speed_max_kmh: number | null
+        }
+        Insert: {
+          active_months?: number[]
+          created_at?: string
+          crop: string
+          description: string
+          dew_point_max_c?: number | null
+          dew_point_min_c?: number | null
+          humidity_max: number
+          humidity_min: number
+          id?: string
+          name: string
+          prevention: string
+          temperature_max_c: number
+          temperature_min_c: number
+          type: string
+          wikipedia?: string | null
+          wind_speed_max_kmh?: number | null
+        }
+        Update: {
+          active_months?: number[]
+          created_at?: string
+          crop?: string
+          description?: string
+          dew_point_max_c?: number | null
+          dew_point_min_c?: number | null
+          humidity_max?: number
+          humidity_min?: number
+          id?: string
+          name?: string
+          prevention?: string
+          temperature_max_c?: number
+          temperature_min_c?: number
+          type?: string
+          wikipedia?: string | null
+          wind_speed_max_kmh?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
