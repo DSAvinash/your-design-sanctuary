@@ -21,6 +21,7 @@ const Index = () => {
         <TodaysPlanWidget />
         <StatsSection />
         <DiagnosisFeature />
+        <PlantDiseaseForecast />
         <WheatBreak />
         <PhilosophySection />
         <NewsletterSection />
