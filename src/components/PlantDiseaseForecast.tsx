@@ -69,7 +69,7 @@ const PlantDiseaseForecast = () => {
       if (error) throw error;
       if (data?.ok) {
         setError(null);
-        alert("✓ Weather API key is valid.");
+        alert(data?.message ?? "✓ Weather service is ready.");
       } else {
         setError(`Weather key check failed: ${data?.message ?? "Unknown error"}`);
       }
