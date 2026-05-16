@@ -1,6 +1,6 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const API_KEY = Deno.env.get("OPENWEATHERMAP_API_KEY");
+const API_KEY = Deno.env.get("OPENWEATHERMAP_API_KEY")?.trim();
 
 interface GeoResult {
   name: string;
