@@ -8,24 +8,6 @@ const json = (body: Record<string, unknown>, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-function weatherKeyError(status: string) {
-  if (status === "401") {
-    return {
-      ok: false,
-      reason: "weather_key_unauthorized",
-      error: "Weather API key is invalid or not active yet. Run Test weather key, then wait for activation or replace the key.",
-    };
-  }
-  if (status === "414") {
-    return {
-      ok: false,
-      reason: "weather_key_malformed",
-      error: "Weather API key looks malformed. Run Test weather key and replace the stored key if needed.",
-    };
-  }
-  return null;
-}
-
 interface GeoResult {
   name: string;
   lat: number;
@@ -35,16 +17,32 @@ interface GeoResult {
 }
 
 async function geocode(query: string): Promise<GeoResult | null> {
-  const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=1&appid=${API_KEY}`;
+  if (API_KEY) {
+    try {
+      const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=1&appid=${API_KEY}`;
+      const r = await fetch(url);
+      if (r.ok) {
+        const data = await r.json();
+        if (!Array.isArray(data) || data.length === 0) return null;
+        const g = data[0];
+        return { name: g.name, lat: g.lat, lon: g.lon, country: g.country, state: g.state };
+      }
+    } catch (err) {
+      console.warn("OpenWeatherMap geocoding unavailable, using fallback", (err as Error).message);
+    }
+  }
+
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Geocoding failed: ${r.status}`);
   const data = await r.json();
-  if (!Array.isArray(data) || data.length === 0) return null;
-  const g = data[0];
-  return { name: g.name, lat: g.lat, lon: g.lon, country: g.country, state: g.state };
+  const g = data.results?.[0];
+  if (!g) return null;
+  return { name: g.name, lat: g.latitude, lon: g.longitude, country: g.country_code ?? g.country ?? "", state: g.admin1 };
 }
 
 async function reverseGeocode(lat: number, lon: number): Promise<GeoResult | null> {
+  if (!API_KEY) return null;
   const url = `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${API_KEY}`;
   const r = await fetch(url);
   if (!r.ok) return null;
@@ -55,6 +53,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<GeoResult | nul
 }
 
 async function fetchForecast(lat: number, lon: number) {
+  if (!API_KEY) throw new Error("Forecast failed: missing_key");
   const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Forecast failed: ${r.status}`);
@@ -62,6 +61,7 @@ async function fetchForecast(lat: number, lon: number) {
 }
 
 async function fetchCurrent(lat: number, lon: number) {
+  if (!API_KEY) throw new Error("Current weather failed: missing_key");
   const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Current weather failed: ${r.status}`);
