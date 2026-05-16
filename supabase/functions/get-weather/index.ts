@@ -131,22 +131,31 @@ function weatherCode(code: number) {
 }
 
 function aggregateOpenMeteoDaily(data: any): DailyAggregate[] {
-  const daily = data.daily ?? {};
-  return (daily.time ?? []).map((date: string, index: number) => {
-    const tempMin = daily.temperature_2m_min?.[index] ?? 0;
-    const tempMax = daily.temperature_2m_max?.[index] ?? 0;
-    const humidity = daily.relative_humidity_2m_mean?.[index] ?? 60;
-    const condition = weatherCode(daily.weather_code?.[index] ?? 0);
+  const hourly = data.hourly ?? {};
+  const buckets: Record<string, number[]> = {};
+  (hourly.time ?? []).forEach((time: string, index: number) => {
+    const date = time.slice(0, 10);
+    (buckets[date] ||= []).push(index);
+  });
+
+  return Object.entries(buckets).slice(0, 5).map(([date, indexes]) => {
+    const temps = indexes.map((i) => hourly.temperature_2m?.[i] ?? 0);
+    const hums = indexes.map((i) => hourly.relative_humidity_2m?.[i] ?? 60);
+    const dews = indexes.map((i) => hourly.dew_point_2m?.[i] ?? dewPoint(hourly.temperature_2m?.[i] ?? 0, hourly.relative_humidity_2m?.[i] ?? 60));
+    const winds = indexes.map((i) => hourly.wind_speed_10m?.[i] ?? 0);
+    const precip = indexes.reduce((sum, i) => sum + (hourly.precipitation?.[i] ?? 0), 0);
+    const mid = indexes[Math.floor(indexes.length / 2)];
+    const condition = weatherCode(hourly.weather_code?.[mid] ?? 0);
     return {
       date,
-      temp_min: tempMin,
-      temp_max: tempMax,
-      temp_avg: (tempMin + tempMax) / 2,
-      humidity_avg: humidity,
-      humidity_max: daily.relative_humidity_2m_max?.[index] ?? humidity,
-      wind_max_kmh: daily.wind_speed_10m_max?.[index] ?? 0,
-      dew_point_avg: daily.dew_point_2m_mean?.[index] ?? dewPoint((tempMin + tempMax) / 2, humidity),
-      precipitation_mm: daily.precipitation_sum?.[index] ?? 0,
+      temp_min: Math.min(...temps),
+      temp_max: Math.max(...temps),
+      temp_avg: temps.reduce((a, b) => a + b, 0) / temps.length,
+      humidity_avg: hums.reduce((a, b) => a + b, 0) / hums.length,
+      humidity_max: Math.max(...hums),
+      wind_max_kmh: Math.max(...winds),
+      dew_point_avg: dews.reduce((a, b) => a + b, 0) / dews.length,
+      precipitation_mm: precip,
       description: condition.description,
       icon: condition.icon,
     };
@@ -159,7 +168,7 @@ async function fetchOpenMeteoWeather(location: GeoResult) {
     latitude: String(location.lat),
     longitude: String(location.lon),
     current: "temperature_2m,relative_humidity_2m,dew_point_2m,wind_speed_10m,weather_code",
-    daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,relative_humidity_2m_mean,relative_humidity_2m_max,dew_point_2m_mean",
+    hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,wind_speed_10m,weather_code",
     forecast_days: "5",
     timezone: "auto",
   }).toString();
