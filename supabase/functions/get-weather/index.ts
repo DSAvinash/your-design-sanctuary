@@ -104,10 +104,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const url0 = new URL(req.url);
-    if (url0.searchParams.get("debug") === "1") {
-      return new Response(JSON.stringify({ keyLen: API_KEY.length, keyPreview: API_KEY.slice(0,4)+"..."+API_KEY.slice(-2) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
 
     const url = new URL(req.url);
     const city = url.searchParams.get("city");
