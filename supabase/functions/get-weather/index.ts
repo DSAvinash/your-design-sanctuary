@@ -129,7 +129,9 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      location = (await reverseGeocode(lat, lon)) ?? { name: "Your location", lat, lon, country: "" };
+      const rLat = Math.round(lat * 10000) / 10000;
+      const rLon = Math.round(lon * 10000) / 10000;
+      location = (await reverseGeocode(rLat, rLon)) ?? { name: "Your location", lat: rLat, lon: rLon, country: "" };
     } else {
       return new Response(JSON.stringify({ error: "Provide city or lat/lon" }), {
         status: 400,
