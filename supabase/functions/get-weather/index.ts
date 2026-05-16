@@ -118,6 +118,72 @@ function aggregateDaily(forecast: any): DailyAggregate[] {
   });
 }
 
+function weatherCode(code: number) {
+  if (code === 0) return { description: "clear sky", icon: "01d" };
+  if ([1, 2].includes(code)) return { description: "partly cloudy", icon: "02d" };
+  if (code === 3) return { description: "overcast clouds", icon: "04d" };
+  if ([45, 48].includes(code)) return { description: "fog", icon: "50d" };
+  if ([51, 53, 55, 56, 57].includes(code)) return { description: "drizzle", icon: "09d" };
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { description: "rain", icon: "10d" };
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { description: "snow", icon: "13d" };
+  if ([95, 96, 99].includes(code)) return { description: "thunderstorm", icon: "11d" };
+  return { description: "mixed conditions", icon: "03d" };
+}
+
+function aggregateOpenMeteoDaily(data: any): DailyAggregate[] {
+  const daily = data.daily ?? {};
+  return (daily.time ?? []).map((date: string, index: number) => {
+    const tempMin = daily.temperature_2m_min?.[index] ?? 0;
+    const tempMax = daily.temperature_2m_max?.[index] ?? 0;
+    const humidity = daily.relative_humidity_2m_mean?.[index] ?? 60;
+    const condition = weatherCode(daily.weather_code?.[index] ?? 0);
+    return {
+      date,
+      temp_min: tempMin,
+      temp_max: tempMax,
+      temp_avg: (tempMin + tempMax) / 2,
+      humidity_avg: humidity,
+      humidity_max: daily.relative_humidity_2m_max?.[index] ?? humidity,
+      wind_max_kmh: daily.wind_speed_10m_max?.[index] ?? 0,
+      dew_point_avg: daily.dew_point_2m_mean?.[index] ?? dewPoint((tempMin + tempMax) / 2, humidity),
+      precipitation_mm: daily.precipitation_sum?.[index] ?? 0,
+      description: condition.description,
+      icon: condition.icon,
+    };
+  });
+}
+
+async function fetchOpenMeteoWeather(location: GeoResult) {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.search = new URLSearchParams({
+    latitude: String(location.lat),
+    longitude: String(location.lon),
+    current: "temperature_2m,relative_humidity_2m,dew_point_2m,wind_speed_10m,weather_code",
+    daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,relative_humidity_2m_mean,relative_humidity_2m_max,dew_point_2m_mean",
+    forecast_days: "5",
+    timezone: "auto",
+  }).toString();
+
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Fallback weather failed: ${r.status}`);
+  const data = await r.json();
+  const currentCondition = weatherCode(data.current?.weather_code ?? 0);
+  return {
+    ok: true,
+    source: "open-meteo-fallback",
+    location,
+    current: {
+      temp: data.current?.temperature_2m ?? 0,
+      humidity: data.current?.relative_humidity_2m ?? 0,
+      wind_kmh: data.current?.wind_speed_10m ?? 0,
+      dew_point: data.current?.dew_point_2m ?? dewPoint(data.current?.temperature_2m ?? 0, data.current?.relative_humidity_2m ?? 60),
+      description: currentCondition.description,
+      icon: currentCondition.icon,
+    },
+    daily: aggregateOpenMeteoDaily(data),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
