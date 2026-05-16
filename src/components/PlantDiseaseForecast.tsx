@@ -190,6 +190,10 @@ const PlantDiseaseForecast = () => {
                 <Button type="button" variant="outline" onClick={onUseLocation} disabled={loading}>
                   <MapPin className="mr-2 h-4 w-4" /> Use my location
                 </Button>
+                <Button type="button" variant="ghost" onClick={onTestKey} disabled={testingKey}>
+                  {testingKey ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Test weather key
+                </Button>
               </form>
               {error && (
                 <div className="mt-3 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
