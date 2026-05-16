@@ -2,6 +2,30 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const API_KEY = Deno.env.get("OPENWEATHERMAP_API_KEY")?.trim();
 
+const json = (body: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+function weatherKeyError(status: string) {
+  if (status === "401") {
+    return {
+      ok: false,
+      reason: "weather_key_unauthorized",
+      error: "Weather API key is invalid or not active yet. Run Test weather key, then wait for activation or replace the key.",
+    };
+  }
+  if (status === "414") {
+    return {
+      ok: false,
+      reason: "weather_key_malformed",
+      error: "Weather API key looks malformed. Run Test weather key and replace the stored key if needed.",
+    };
+  }
+  return null;
+}
+
 interface GeoResult {
   name: string;
   lat: number;
@@ -99,10 +123,7 @@ Deno.serve(async (req) => {
 
   try {
     if (!API_KEY) {
-      return new Response(JSON.stringify({ error: "Weather API key not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ ok: false, reason: "weather_key_missing", error: "Weather API key not configured" });
     }
 
     const url = new URL(req.url);
@@ -114,36 +135,24 @@ Deno.serve(async (req) => {
 
     if (city) {
       if (city.length > 100) {
-        return new Response(JSON.stringify({ error: "City name too long" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json({ error: "City name too long" }, 400);
       }
       location = await geocode(city);
     } else if (latParam && lonParam) {
       const lat = parseFloat(latParam);
       const lon = parseFloat(lonParam);
       if (Number.isNaN(lat) || Number.isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-        return new Response(JSON.stringify({ error: "Invalid coordinates" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return json({ error: "Invalid coordinates" }, 400);
       }
       const rLat = Math.round(lat * 10000) / 10000;
       const rLon = Math.round(lon * 10000) / 10000;
       location = (await reverseGeocode(rLat, rLon)) ?? { name: "Your location", lat: rLat, lon: rLon, country: "" };
     } else {
-      return new Response(JSON.stringify({ error: "Provide city or lat/lon" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Provide city or lat/lon" }, 400);
     }
 
     if (!location) {
-      return new Response(JSON.stringify({ error: "Location not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return json({ error: "Location not found" }, 404);
     }
 
     const [current, forecast] = await Promise.all([
@@ -172,9 +181,9 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("get-weather error", err);
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const message = (err as Error).message;
+    const keyError = weatherKeyError(message.split(": ").pop() ?? "");
+    if (keyError) return json(keyError);
+    return json({ error: message }, 500);
   }
 });

@@ -37,6 +37,9 @@ const STORAGE_CROPS = "pdf:selected-crops";
 const STORAGE_LOC = "pdf:last-location";
 
 interface WeatherResponse {
+  ok?: boolean;
+  reason?: string;
+  error?: string;
   location: { name: string; lat: number; lon: number; country: string; state?: string };
   current: {
     temp: number;
@@ -122,6 +125,11 @@ const PlantDiseaseForecast = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load weather");
+      if (data?.ok === false) {
+        setWeather(null);
+        setError(data.error || "Weather key check failed. Test the weather key before running forecasts.");
+        return;
+      }
       setWeather(data);
       localStorage.setItem(
         STORAGE_LOC,
