@@ -57,6 +57,25 @@ const PlantDiseaseForecast = () => {
   const [diseases, setDiseases] = useState<Disease[]>([]);
   const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
   const [openRisk, setOpenRisk] = useState<DiseaseRisk | null>(null);
+  const [testingKey, setTestingKey] = useState(false);
+
+  const onTestKey = async () => {
+    setTestingKey(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-weather-key");
+      if (error) throw error;
+      if (data?.ok) {
+        setError(null);
+        alert("✓ Weather API key is valid.");
+      } else {
+        setError(`Weather key check failed: ${data?.message ?? "Unknown error"}`);
+      }
+    } catch (e) {
+      setError(`Weather key check failed: ${(e as Error).message}`);
+    } finally {
+      setTestingKey(false);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -189,6 +208,10 @@ const PlantDiseaseForecast = () => {
                 </Button>
                 <Button type="button" variant="outline" onClick={onUseLocation} disabled={loading}>
                   <MapPin className="mr-2 h-4 w-4" /> Use my location
+                </Button>
+                <Button type="button" variant="ghost" onClick={onTestKey} disabled={testingKey}>
+                  {testingKey ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Test weather key
                 </Button>
               </form>
               {error && (
