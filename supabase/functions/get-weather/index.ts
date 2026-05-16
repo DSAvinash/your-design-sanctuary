@@ -188,10 +188,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    if (!API_KEY) {
-      return json({ ok: false, reason: "weather_key_missing", error: "Weather API key not configured" });
-    }
-
     const url = new URL(req.url);
     const city = url.searchParams.get("city");
     const latParam = url.searchParams.get("lat");
@@ -221,10 +217,24 @@ Deno.serve(async (req) => {
       return json({ error: "Location not found" }, 404);
     }
 
-    const [current, forecast] = await Promise.all([
-      fetchCurrent(location.lat, location.lon),
-      fetchForecast(location.lat, location.lon),
-    ]);
+    if (!API_KEY) {
+      return json(await fetchOpenMeteoWeather(location));
+    }
+
+    let current: any;
+    let forecast: any;
+    try {
+      [current, forecast] = await Promise.all([
+        fetchCurrent(location.lat, location.lon),
+        fetchForecast(location.lat, location.lon),
+      ]);
+    } catch (err) {
+      const status = (err as Error).message.split(": ").pop();
+      if (["401", "414", "missing_key"].includes(status ?? "")) {
+        return json(await fetchOpenMeteoWeather(location));
+      }
+      throw err;
+    }
 
     const daily = aggregateDaily(forecast);
 
@@ -232,6 +242,8 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
+        ok: true,
+        source: "openweathermap",
         location,
         current: {
           temp: current.main.temp,
@@ -248,8 +260,6 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("get-weather error", err);
     const message = (err as Error).message;
-    const keyError = weatherKeyError(message.split(": ").pop() ?? "");
-    if (keyError) return json(keyError);
     return json({ error: message }, 500);
   }
 });
