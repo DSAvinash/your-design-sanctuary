@@ -22,6 +22,16 @@ Deno.serve(async (req) => {
     });
   }
 
+  const fallbackReady = async () => {
+    try {
+      const r = await fetch("https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0&current=temperature_2m");
+      await r.text();
+      return r.ok;
+    } catch {
+      return false;
+    }
+  };
+
   try {
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=0&lon=0&appid=${key}`;
     const r = await fetch(url);
@@ -38,8 +48,11 @@ Deno.serve(async (req) => {
       : "api_error";
     const message =
       r.status === 401
-        ? "Invalid or not-yet-activated key. New OpenWeatherMap keys can take up to ~2 hours to activate."
+        ? "OpenWeatherMap key is not active yet, but forecasts are working through the built-in fallback weather provider."
         : parsed?.message || `OpenWeatherMap returned ${r.status}.`;
+    if (r.status === 401 && await fallbackReady()) {
+      return json({ ok: true, reason: "fallback_available", status: r.status, message });
+    }
     return json({ ok: false, reason, status: r.status, message });
   } catch (err) {
     return json({ ok: false, reason: "network_error", message: (err as Error).message }, 200);

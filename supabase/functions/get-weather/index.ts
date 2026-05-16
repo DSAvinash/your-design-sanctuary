@@ -8,24 +8,6 @@ const json = (body: Record<string, unknown>, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-function weatherKeyError(status: string) {
-  if (status === "401") {
-    return {
-      ok: false,
-      reason: "weather_key_unauthorized",
-      error: "Weather API key is invalid or not active yet. Run Test weather key, then wait for activation or replace the key.",
-    };
-  }
-  if (status === "414") {
-    return {
-      ok: false,
-      reason: "weather_key_malformed",
-      error: "Weather API key looks malformed. Run Test weather key and replace the stored key if needed.",
-    };
-  }
-  return null;
-}
-
 interface GeoResult {
   name: string;
   lat: number;
@@ -35,16 +17,32 @@ interface GeoResult {
 }
 
 async function geocode(query: string): Promise<GeoResult | null> {
-  const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=1&appid=${API_KEY}`;
+  if (API_KEY) {
+    try {
+      const url = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=1&appid=${API_KEY}`;
+      const r = await fetch(url);
+      if (r.ok) {
+        const data = await r.json();
+        if (!Array.isArray(data) || data.length === 0) return null;
+        const g = data[0];
+        return { name: g.name, lat: g.lat, lon: g.lon, country: g.country, state: g.state };
+      }
+    } catch (err) {
+      console.warn("OpenWeatherMap geocoding unavailable, using fallback", (err as Error).message);
+    }
+  }
+
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Geocoding failed: ${r.status}`);
   const data = await r.json();
-  if (!Array.isArray(data) || data.length === 0) return null;
-  const g = data[0];
-  return { name: g.name, lat: g.lat, lon: g.lon, country: g.country, state: g.state };
+  const g = data.results?.[0];
+  if (!g) return null;
+  return { name: g.name, lat: g.latitude, lon: g.longitude, country: g.country_code ?? g.country ?? "", state: g.admin1 };
 }
 
 async function reverseGeocode(lat: number, lon: number): Promise<GeoResult | null> {
+  if (!API_KEY) return null;
   const url = `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${API_KEY}`;
   const r = await fetch(url);
   if (!r.ok) return null;
@@ -55,6 +53,7 @@ async function reverseGeocode(lat: number, lon: number): Promise<GeoResult | nul
 }
 
 async function fetchForecast(lat: number, lon: number) {
+  if (!API_KEY) throw new Error("Forecast failed: missing_key");
   const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Forecast failed: ${r.status}`);
@@ -62,6 +61,7 @@ async function fetchForecast(lat: number, lon: number) {
 }
 
 async function fetchCurrent(lat: number, lon: number) {
+  if (!API_KEY) throw new Error("Current weather failed: missing_key");
   const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Current weather failed: ${r.status}`);
@@ -118,14 +118,85 @@ function aggregateDaily(forecast: any): DailyAggregate[] {
   });
 }
 
+function weatherCode(code: number) {
+  if (code === 0) return { description: "clear sky", icon: "01d" };
+  if ([1, 2].includes(code)) return { description: "partly cloudy", icon: "02d" };
+  if (code === 3) return { description: "overcast clouds", icon: "04d" };
+  if ([45, 48].includes(code)) return { description: "fog", icon: "50d" };
+  if ([51, 53, 55, 56, 57].includes(code)) return { description: "drizzle", icon: "09d" };
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { description: "rain", icon: "10d" };
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { description: "snow", icon: "13d" };
+  if ([95, 96, 99].includes(code)) return { description: "thunderstorm", icon: "11d" };
+  return { description: "mixed conditions", icon: "03d" };
+}
+
+function aggregateOpenMeteoDaily(data: any): DailyAggregate[] {
+  const hourly = data.hourly ?? {};
+  const buckets: Record<string, number[]> = {};
+  (hourly.time ?? []).forEach((time: string, index: number) => {
+    const date = time.slice(0, 10);
+    (buckets[date] ||= []).push(index);
+  });
+
+  return Object.entries(buckets).slice(0, 5).map(([date, indexes]) => {
+    const temps = indexes.map((i) => hourly.temperature_2m?.[i] ?? 0);
+    const hums = indexes.map((i) => hourly.relative_humidity_2m?.[i] ?? 60);
+    const dews = indexes.map((i) => hourly.dew_point_2m?.[i] ?? dewPoint(hourly.temperature_2m?.[i] ?? 0, hourly.relative_humidity_2m?.[i] ?? 60));
+    const winds = indexes.map((i) => hourly.wind_speed_10m?.[i] ?? 0);
+    const precip = indexes.reduce((sum, i) => sum + (hourly.precipitation?.[i] ?? 0), 0);
+    const mid = indexes[Math.floor(indexes.length / 2)];
+    const condition = weatherCode(hourly.weather_code?.[mid] ?? 0);
+    return {
+      date,
+      temp_min: Math.min(...temps),
+      temp_max: Math.max(...temps),
+      temp_avg: temps.reduce((a, b) => a + b, 0) / temps.length,
+      humidity_avg: hums.reduce((a, b) => a + b, 0) / hums.length,
+      humidity_max: Math.max(...hums),
+      wind_max_kmh: Math.max(...winds),
+      dew_point_avg: dews.reduce((a, b) => a + b, 0) / dews.length,
+      precipitation_mm: precip,
+      description: condition.description,
+      icon: condition.icon,
+    };
+  });
+}
+
+async function fetchOpenMeteoWeather(location: GeoResult) {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.search = new URLSearchParams({
+    latitude: String(location.lat),
+    longitude: String(location.lon),
+    current: "temperature_2m,relative_humidity_2m,dew_point_2m,wind_speed_10m,weather_code",
+    hourly: "temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,wind_speed_10m,weather_code",
+    forecast_days: "5",
+    timezone: "auto",
+  }).toString();
+
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Fallback weather failed: ${r.status}`);
+  const data = await r.json();
+  const currentCondition = weatherCode(data.current?.weather_code ?? 0);
+  return {
+    ok: true,
+    source: "open-meteo-fallback",
+    location,
+    current: {
+      temp: data.current?.temperature_2m ?? 0,
+      humidity: data.current?.relative_humidity_2m ?? 0,
+      wind_kmh: data.current?.wind_speed_10m ?? 0,
+      dew_point: data.current?.dew_point_2m ?? dewPoint(data.current?.temperature_2m ?? 0, data.current?.relative_humidity_2m ?? 60),
+      description: currentCondition.description,
+      icon: currentCondition.icon,
+    },
+    daily: aggregateOpenMeteoDaily(data),
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    if (!API_KEY) {
-      return json({ ok: false, reason: "weather_key_missing", error: "Weather API key not configured" });
-    }
-
     const url = new URL(req.url);
     const city = url.searchParams.get("city");
     const latParam = url.searchParams.get("lat");
@@ -155,10 +226,24 @@ Deno.serve(async (req) => {
       return json({ error: "Location not found" }, 404);
     }
 
-    const [current, forecast] = await Promise.all([
-      fetchCurrent(location.lat, location.lon),
-      fetchForecast(location.lat, location.lon),
-    ]);
+    if (!API_KEY) {
+      return json(await fetchOpenMeteoWeather(location));
+    }
+
+    let current: any;
+    let forecast: any;
+    try {
+      [current, forecast] = await Promise.all([
+        fetchCurrent(location.lat, location.lon),
+        fetchForecast(location.lat, location.lon),
+      ]);
+    } catch (err) {
+      const status = (err as Error).message.split(": ").pop();
+      if (["401", "414", "missing_key"].includes(status ?? "")) {
+        return json(await fetchOpenMeteoWeather(location));
+      }
+      throw err;
+    }
 
     const daily = aggregateDaily(forecast);
 
@@ -166,6 +251,8 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
+        ok: true,
+        source: "openweathermap",
         location,
         current: {
           temp: current.main.temp,
@@ -182,8 +269,6 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("get-weather error", err);
     const message = (err as Error).message;
-    const keyError = weatherKeyError(message.split(": ").pop() ?? "");
-    if (keyError) return json(keyError);
     return json({ error: message }, 500);
   }
 });
