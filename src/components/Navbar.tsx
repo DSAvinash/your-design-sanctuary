@@ -56,6 +56,12 @@ const Navbar = () => {
           )}
         </div>
         <div className="md:hidden flex items-center gap-2">
+          <Link
+            to="/weather-forecast"
+            className="text-[10px] uppercase tracking-widest font-headline text-primary/80 hover:opacity-80"
+          >
+            Forecast
+          </Link>
           <LanguageSwitcher compact />
           {user ? (
             <Button variant="outline" size="sm" onClick={signOut} className="rounded-full">

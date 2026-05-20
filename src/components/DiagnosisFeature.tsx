@@ -34,6 +34,13 @@ const DiagnosisFeature = () => {
                 <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">biotech</span>
                 Start Diagnosis Scan
               </Link>
+              <Link
+                to="/weather-forecast"
+                className="self-start px-12 py-5 bg-secondary text-on-secondary font-headline text-xs uppercase tracking-[0.2em] rounded-full hover:opacity-90 transition-all shadow-lg hover:shadow-xl flex items-center gap-4 group"
+              >
+                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">partly_cloudy_day</span>
+                Weather Forecast
+              </Link>
             </div>
           </div>
         </ScrollReveal>
