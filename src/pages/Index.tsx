@@ -28,6 +28,7 @@ const Index = () => {
       </main>
       <Footer />
       <FloatingChatLauncher />
+      <FloatingForecastButton />
     </div>
   );
 };
