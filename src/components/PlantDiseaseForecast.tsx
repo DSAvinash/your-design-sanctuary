@@ -58,7 +58,7 @@ const PlantDiseaseForecast = () => {
   const [error, setError] = useState<string | null>(null);
   const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [diseases, setDiseases] = useState<Disease[]>([]);
-  const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
+  const [selectedCrops, setSelectedCrops] = useState<string[]>(["Tomato"]);
   const [openRisk, setOpenRisk] = useState<DiseaseRisk | null>(null);
   const [testingKey, setTestingKey] = useState(false);
 
@@ -81,20 +81,31 @@ const PlantDiseaseForecast = () => {
   };
 
   useEffect(() => {
+    let hasSavedLoc = false;
     try {
       const c = localStorage.getItem(STORAGE_CROPS);
-      if (c) setSelectedCrops(JSON.parse(c));
+      if (c) {
+        const parsedCrops = JSON.parse(c);
+        if (Array.isArray(parsedCrops) && parsedCrops.length > 0) setSelectedCrops(parsedCrops);
+      }
       const l = localStorage.getItem(STORAGE_LOC);
       if (l) {
         const parsed = JSON.parse(l);
         if (parsed.city) {
+          hasSavedLoc = true;
           setCity(parsed.city);
           fetchWeather({ city: parsed.city });
         } else if (parsed.lat && parsed.lon) {
+          hasSavedLoc = true;
           fetchWeather({ lat: parsed.lat, lon: parsed.lon });
         }
       }
     } catch {}
+    if (!hasSavedLoc) {
+      // Default location so the forecast renders immediately
+      setCity("Bangalore");
+      fetchWeather({ city: "Bangalore" });
+    }
     supabase
       .from("plant_diseases")
       .select("*")
