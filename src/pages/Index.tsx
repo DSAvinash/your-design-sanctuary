@@ -7,6 +7,7 @@ import PhilosophySection from "@/components/PhilosophySection";
 import NewsletterSection from "@/components/NewsletterSection";
 import Footer from "@/components/Footer";
 import FloatingChatLauncher from "@/components/FloatingChatLauncher";
+import FloatingForecastButton from "@/components/FloatingForecastButton";
 import TodaysPlanWidget from "@/components/TodaysPlanWidget";
 
 import { SystemHealthBanner } from "@/components/SystemHealthBanner";
