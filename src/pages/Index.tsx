@@ -8,7 +8,7 @@ import NewsletterSection from "@/components/NewsletterSection";
 import Footer from "@/components/Footer";
 import FloatingChatLauncher from "@/components/FloatingChatLauncher";
 import TodaysPlanWidget from "@/components/TodaysPlanWidget";
-import PlantDiseaseForecast from "@/components/PlantDiseaseForecast";
+
 import { SystemHealthBanner } from "@/components/SystemHealthBanner";
 
 const Index = () => {
@@ -21,7 +21,6 @@ const Index = () => {
         <TodaysPlanWidget />
         <StatsSection />
         <DiagnosisFeature />
-        <PlantDiseaseForecast />
         <WheatBreak />
         <PhilosophySection />
         <NewsletterSection />

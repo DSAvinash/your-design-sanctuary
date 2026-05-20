@@ -24,6 +24,12 @@ const Navbar = () => {
           >
             {t("nav.diagnosis")}
           </Link>
+          <Link
+            to="/weather-forecast"
+            className="text-xs uppercase tracking-widest font-headline text-primary/70 hover:opacity-80 transition-opacity duration-300"
+          >
+            Weather Forecast
+          </Link>
           <a
             href="#philosophy"
             className="text-xs uppercase tracking-widest font-headline text-primary/70 hover:opacity-80 transition-opacity duration-300"
