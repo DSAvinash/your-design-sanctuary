@@ -139,7 +139,9 @@ const PlantDiseaseForecast = () => {
       if (!res.ok) throw new Error(data.error || "Failed to load weather");
       if (data?.ok === false) {
         setWeather(null);
-        setError(data.error || "Weather key check failed. Test the weather key before running forecasts.");
+        const msg = data.error || "Weather key check failed. Test the weather key before running forecasts.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
       setWeather(data);
@@ -148,7 +150,9 @@ const PlantDiseaseForecast = () => {
         JSON.stringify(params.city ? { city: params.city } : { lat: params.lat, lon: params.lon }),
       );
     } catch (e) {
-      setError((e as Error).message);
+      const msg = (e as Error).message;
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
