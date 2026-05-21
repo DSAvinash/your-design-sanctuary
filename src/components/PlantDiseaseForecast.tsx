@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ import {
   riskColor,
   riskDot,
 } from "@/lib/diseaseRisk";
+import { toast } from "sonner";
 
 const CROPS = ["Apple", "Apricot", "Cherry", "Grape", "Peach", "Pear", "Tomato", "Potato", "Corn"];
 const STORAGE_CROPS = "pdf:selected-crops";
