@@ -165,7 +165,7 @@ const PlantDiseaseForecast = () => {
 
   const onUseLocation = () => {
     if (!navigator.geolocation) {
-      setError("Geolocation not supported by your browser");
+      toast.error("Geolocation is not supported by your browser");
       return;
     }
     setLoading(true);
@@ -173,7 +173,7 @@ const PlantDiseaseForecast = () => {
       (pos) => fetchWeather({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
       (err) => {
         setLoading(false);
-        setError(err.message);
+        toast.error(err.message);
       },
     );
   };
