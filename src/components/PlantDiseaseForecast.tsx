@@ -70,13 +70,12 @@ const PlantDiseaseForecast = () => {
       const { data, error } = await supabase.functions.invoke("verify-weather-key");
       if (error) throw error;
       if (data?.ok) {
-        setError(null);
-        alert(data?.message ?? "✓ Weather service is ready.");
+        toast.success(data?.message ?? "Weather service is ready.");
       } else {
-        setError(`Weather key check failed: ${data?.message ?? "Unknown error"}`);
+        toast.error(`Weather key check failed: ${data?.message ?? "Unknown error"}`);
       }
     } catch (e) {
-      setError(`Weather key check failed: ${(e as Error).message}`);
+      toast.error(`Weather key check failed: ${(e as Error).message}`);
     } finally {
       setTestingKey(false);
     }
