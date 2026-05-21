@@ -280,6 +280,37 @@ const PlantDiseaseForecast = () => {
         </div>
 
         {/* Current weather + today summary */}
+        {loading && !weather && (
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-1">
+              <CardHeader className="pb-2"><Skeleton className="h-5 w-40" /></CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-16 w-16 rounded-lg" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <Skeleton className="h-14 w-full rounded-md" />
+                  <Skeleton className="h-14 w-full rounded-md" />
+                  <Skeleton className="h-14 w-full rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-2"><Skeleton className="h-5 w-36" /></CardHeader>
+              <CardContent>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Skeleton className="h-20 w-full rounded-md" />
+                  <Skeleton className="h-20 w-full rounded-md" />
+                  <Skeleton className="h-20 w-full rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         {weather && (
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-1">
