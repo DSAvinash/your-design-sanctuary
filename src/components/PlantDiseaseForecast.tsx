@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ import {
   riskColor,
   riskDot,
 } from "@/lib/diseaseRisk";
+import { toast } from "sonner";
 
 const CROPS = ["Apple", "Apricot", "Cherry", "Grape", "Peach", "Pear", "Tomato", "Potato", "Corn"];
 const STORAGE_CROPS = "pdf:selected-crops";
@@ -68,13 +70,12 @@ const PlantDiseaseForecast = () => {
       const { data, error } = await supabase.functions.invoke("verify-weather-key");
       if (error) throw error;
       if (data?.ok) {
-        setError(null);
-        alert(data?.message ?? "✓ Weather service is ready.");
+        toast.success(data?.message ?? "Weather service is ready.");
       } else {
-        setError(`Weather key check failed: ${data?.message ?? "Unknown error"}`);
+        toast.error(`Weather key check failed: ${data?.message ?? "Unknown error"}`);
       }
     } catch (e) {
-      setError(`Weather key check failed: ${(e as Error).message}`);
+      toast.error(`Weather key check failed: ${(e as Error).message}`);
     } finally {
       setTestingKey(false);
     }
@@ -138,7 +139,9 @@ const PlantDiseaseForecast = () => {
       if (!res.ok) throw new Error(data.error || "Failed to load weather");
       if (data?.ok === false) {
         setWeather(null);
-        setError(data.error || "Weather key check failed. Test the weather key before running forecasts.");
+        const msg = data.error || "Weather key check failed. Test the weather key before running forecasts.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
       setWeather(data);
@@ -147,7 +150,9 @@ const PlantDiseaseForecast = () => {
         JSON.stringify(params.city ? { city: params.city } : { lat: params.lat, lon: params.lon }),
       );
     } catch (e) {
-      setError((e as Error).message);
+      const msg = (e as Error).message;
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -160,7 +165,7 @@ const PlantDiseaseForecast = () => {
 
   const onUseLocation = () => {
     if (!navigator.geolocation) {
-      setError("Geolocation not supported by your browser");
+      toast.error("Geolocation is not supported by your browser");
       return;
     }
     setLoading(true);
@@ -168,7 +173,7 @@ const PlantDiseaseForecast = () => {
       (pos) => fetchWeather({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
       (err) => {
         setLoading(false);
-        setError(err.message);
+        toast.error(err.message);
       },
     );
   };
@@ -275,6 +280,37 @@ const PlantDiseaseForecast = () => {
         </div>
 
         {/* Current weather + today summary */}
+        {loading && !weather && (
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <Card className="lg:col-span-1">
+              <CardHeader className="pb-2"><Skeleton className="h-5 w-40" /></CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-16 w-16 rounded-lg" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <Skeleton className="h-14 w-full rounded-md" />
+                  <Skeleton className="h-14 w-full rounded-md" />
+                  <Skeleton className="h-14 w-full rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-2"><Skeleton className="h-5 w-36" /></CardHeader>
+              <CardContent>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Skeleton className="h-20 w-full rounded-md" />
+                  <Skeleton className="h-20 w-full rounded-md" />
+                  <Skeleton className="h-20 w-full rounded-md" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         {weather && (
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-1">
@@ -345,6 +381,34 @@ const PlantDiseaseForecast = () => {
         )}
 
         {/* 5-day timeline */}
+        {loading && !weather && (
+          <div className="mt-6">
+            <Skeleton className="mb-3 h-6 w-40" />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-2.5 w-2.5 rounded-full" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-10 w-10 rounded-lg" />
+                      <div className="space-y-1.5">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-6 w-full rounded" />
+                      <Skeleton className="h-6 w-full rounded" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
         {weather && selectedCrops.length > 0 && (
           <div className="mt-6">
             <h3 className="mb-3 text-lg font-semibold">5-day risk timeline</h3>
