@@ -9,6 +9,7 @@ import LeafDiagnosis from "./pages/LeafDiagnosis.tsx";
 import AgroAssist from "./pages/AgroAssist.tsx";
 import Auth from "./pages/Auth.tsx";
 import WeatherForecast from "./pages/WeatherForecast.tsx";
+import AdminSubscribers from "./pages/AdminSubscribers.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/leaf-diagnosis" element={<LeafDiagnosis />} />
             <Route path="/agro-assist" element={<AgroAssist />} />
             <Route path="/weather-forecast" element={<WeatherForecast />} />
+            <Route path="/admin/subscribers" element={<AdminSubscribers />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
