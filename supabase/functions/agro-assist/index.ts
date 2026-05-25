@@ -17,6 +17,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const { user } = await requireUser(req);
+  if (!user) return unauthorizedResponse(corsHeaders);
+
   try {
     const { messages, system } = (await req.json()) as {
       messages: Msg[];
