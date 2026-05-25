@@ -1,5 +1,6 @@
 // Unified Advisory Engine — fuses latest scan + weather + crop context into "Today's Plan"
 // Returns 3 sections: irrigation, disease risk, action focus + AI brief.
+import { requireUser, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
