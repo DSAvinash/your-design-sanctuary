@@ -243,6 +243,9 @@ async function aiPersonalise(payload: unknown, language: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  const { user } = await requireUser(req);
+  if (!user) return unauthorizedResponse(corsHeaders);
+
   try {
     const body = (await req.json()) as RequestBody;
     const { crop, growthStage, location, language = "en" } = body ?? {};
