@@ -2,6 +2,7 @@
 // - Pulls live weather (Open-Meteo, no key)
 // - Applies rule engine for irrigation timing + disease risk + scouting checklist
 // - Personalises with Lovable AI Gateway
+import { requireUser, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
