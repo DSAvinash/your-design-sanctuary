@@ -65,6 +65,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const { user } = await requireUser(req);
+  if (!user) return unauthorizedResponse(corsHeaders);
+
   try {
     const body = (await req.json()) as RequestBody;
     const crop = (body.crop ?? "").trim().toLowerCase();
