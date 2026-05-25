@@ -1,5 +1,6 @@
 // Send Today's Plan as SMS or WhatsApp via Twilio connector gateway
 // Body: { to: "+91...", channel: "sms" | "whatsapp", message: string }
+import { requireUser, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
