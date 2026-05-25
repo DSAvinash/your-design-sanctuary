@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, X, Server, Database, ShieldAlert, RefreshCw } from "lucide-react";
+import { AlertTriangle, X, RefreshCw } from "lucide-react";
 import { useHealthCheck, type HealthCheck } from "@/hooks/useHealthCheck";
 
 function getStatusColor(status: HealthCheck["status"]) {
@@ -26,20 +26,6 @@ function getStatusColor(status: HealthCheck["status"]) {
         icon: "text-transparent",
       };
   }
-}
-
-function formatErrorDetail(health: HealthCheck): string {
-  const parts: string[] = [];
-  if (health.checks.auth.status === "unhealthy" && health.checks.auth.error) {
-    parts.push(`Auth: ${health.checks.auth.error}`);
-  }
-  if (health.checks.database.status === "unhealthy" && health.checks.database.error) {
-    parts.push(`DB: ${health.checks.database.error}`);
-  }
-  if (health.checks.edgeFunctions.status === "unhealthy" && health.checks.edgeFunctions.error) {
-    parts.push(`Edge: ${health.checks.edgeFunctions.error}`);
-  }
-  return parts.join(" · ") || "Some services are experiencing issues.";
 }
 
 export function SystemHealthBanner() {
@@ -72,23 +58,14 @@ export function SystemHealthBanner() {
               {isDegraded ? "Service Degraded" : "Service Disruption"}
             </span>
             <span className={`text-xs ${colors.text} opacity-80 truncate`}>
-              {formatErrorDetail(health)}
+              {isDegraded
+                ? "Some services are experiencing issues. Functionality may be limited."
+                : "Services are currently unavailable. Please try again shortly."}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <div className="hidden sm:flex items-center gap-2">
-            {health.checks.auth.status === "unhealthy" && (
-              <ShieldAlert className={`h-3.5 w-3.5 ${colors.icon}`} />
-            )}
-            {health.checks.database.status === "unhealthy" && (
-              <Database className={`h-3.5 w-3.5 ${colors.icon}`} />
-            )}
-            {health.checks.edgeFunctions.status === "unhealthy" && (
-              <Server className={`h-3.5 w-3.5 ${colors.icon}`} />
-            )}
-          </div>
           <button
             onClick={handleRetry}
             disabled={retrying}
