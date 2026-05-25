@@ -1,5 +1,6 @@
 // Send Today's Plan as SMS or WhatsApp via Twilio connector gateway
 // Body: { to: "+91...", channel: "sms" | "whatsapp", message: string }
+import { requireUser, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +21,9 @@ const lastSent = new Map<string, number>();
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const { user } = await requireUser(req);
+  if (!user) return unauthorizedResponse(corsHeaders);
 
   try {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

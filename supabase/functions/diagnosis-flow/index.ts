@@ -18,8 +18,13 @@ interface RequestBody {
   language: string;
 }
 
+import { requireUser, unauthorizedResponse } from "../_shared/auth.ts";
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const { user } = await requireUser(req);
+  if (!user) return unauthorizedResponse(corsHeaders);
 
   try {
     const body = (await req.json()) as RequestBody;

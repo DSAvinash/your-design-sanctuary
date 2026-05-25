@@ -2,6 +2,7 @@
 // - Pulls live weather (Open-Meteo, no key)
 // - Applies rule engine for irrigation timing + disease risk + scouting checklist
 // - Personalises with Lovable AI Gateway
+import { requireUser, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -241,6 +242,9 @@ async function aiPersonalise(payload: unknown, language: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const { user } = await requireUser(req);
+  if (!user) return unauthorizedResponse(corsHeaders);
 
   try {
     const body = (await req.json()) as RequestBody;

@@ -1,5 +1,6 @@
 // Unified Advisory Engine — fuses latest scan + weather + crop context into "Today's Plan"
 // Returns 3 sections: irrigation, disease risk, action focus + AI brief.
+import { requireUser, unauthorizedResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -165,6 +166,8 @@ async function aiBrief(payload: unknown, language: string): Promise<string | nul
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const { user } = await requireUser(req);
+  if (!user) return unauthorizedResponse(corsHeaders);
   try {
     const body = (await req.json()) as Body;
     const { location, latestScan, language = "en" } = body ?? {};
