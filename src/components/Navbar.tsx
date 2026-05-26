@@ -11,12 +11,12 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 w-full z-50 bg-surface-container-low/80 tonal-shift shadow-[0_32px_64px_-15px_rgba(40,45,26,0.04)]">
       <div className="flex justify-between items-center px-8 h-20 max-w-[1440px] mx-auto">
-        <div className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3">
           <span className="material-symbols-outlined text-primary">agriculture</span>
           <span className="text-xl font-bold tracking-widest text-primary font-headline uppercase">
             AgroVision AI
           </span>
-        </div>
+        </Link>
         <div className="hidden md:flex items-center gap-8">
           <Link
             to="/leaf-diagnosis"
