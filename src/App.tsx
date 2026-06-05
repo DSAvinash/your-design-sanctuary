@@ -32,6 +32,7 @@ const App = () => (
             <Route path="/weather-forecast" element={<WeatherForecast />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/subscribers" element={<AdminSubscribers />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
