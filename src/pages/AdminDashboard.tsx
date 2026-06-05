@@ -295,6 +295,12 @@ export default function AdminDashboard() {
                 <ExternalLink className="h-3 w-3 ml-2" />
               </Link>
             </Button>
+            <Button asChild variant="outline">
+              <Link to="/admin/settings">
+                <Settings className="h-4 w-4 mr-2" /> Admin Settings
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>
