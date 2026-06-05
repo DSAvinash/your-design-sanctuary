@@ -14,6 +14,7 @@ import {
   Leaf,
   LogOut,
   ExternalLink,
+  Settings,
 } from "lucide-react";
 
 interface Stats {
