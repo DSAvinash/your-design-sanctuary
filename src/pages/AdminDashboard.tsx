@@ -14,6 +14,7 @@ import {
   Leaf,
   LogOut,
   ExternalLink,
+  Settings,
 } from "lucide-react";
 
 interface Stats {
@@ -291,6 +292,12 @@ export default function AdminDashboard() {
             <Button asChild variant="outline">
               <Link to="/admin/subscribers">
                 <Mail className="h-4 w-4 mr-2" /> Newsletter Subscribers
+                <ExternalLink className="h-3 w-3 ml-2" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/admin/settings">
+                <Settings className="h-4 w-4 mr-2" /> Admin Settings
                 <ExternalLink className="h-3 w-3 ml-2" />
               </Link>
             </Button>

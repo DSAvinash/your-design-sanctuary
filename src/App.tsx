@@ -12,6 +12,7 @@ import WeatherForecast from "./pages/WeatherForecast.tsx";
 import AdminSubscribers from "./pages/AdminSubscribers.tsx";
 import AdminLogin from "./pages/AdminLogin.tsx";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
+import AdminSettings from "./pages/AdminSettings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/weather-forecast" element={<WeatherForecast />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/subscribers" element={<AdminSubscribers />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
