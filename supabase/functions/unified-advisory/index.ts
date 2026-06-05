@@ -166,8 +166,6 @@ async function aiBrief(payload: unknown, language: string): Promise<string | nul
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  const { user } = await requireUser(req);
-  if (!user) return unauthorizedResponse(corsHeaders);
   try {
     const body = (await req.json()) as Body;
     const { location, latestScan, language = "en" } = body ?? {};
