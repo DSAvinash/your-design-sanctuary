@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminAuthGuard } from "@/lib/adminAuthGuard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +39,7 @@ interface TopPage {
 
 export default function AdminDashboard() {
   const { session, loading: authLoading, signOut } = useAuth();
+  const handleAuthError = useAdminAuthGuard();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -63,11 +65,14 @@ export default function AdminDashboard() {
         .eq("user_id", session.user.id)
         .eq("role", "admin")
         .maybeSingle();
-      if (error) toast.error("Could not verify admin access");
+      if (error) {
+        if (handleAuthError(error)) return;
+        toast.error("Could not verify admin access");
+      }
       setIsAdmin(!!data);
       setCheckingRole(false);
     })();
-  }, [session, authLoading]);
+  }, [session, authLoading, handleAuthError]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -120,12 +125,13 @@ export default function AdminDashboard() {
             .slice(0, 5),
         );
       } catch (err: any) {
+        if (handleAuthError(err)) return;
         toast.error(err.message ?? "Failed to load dashboard");
       } finally {
         setLoading(false);
       }
     })();
-  }, [isAdmin]);
+  }, [isAdmin, handleAuthError]);
 
   if (authLoading || checkingRole) {
     return (

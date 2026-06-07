@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminAuthGuard } from "@/lib/adminAuthGuard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { ArrowLeft, Mail, Lock } from "lucide-react";
 
 export default function AdminSettings() {
   const { session, loading: authLoading } = useAuth();
+  const handleAuthError = useAdminAuthGuard();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -28,16 +30,17 @@ export default function AdminSettings() {
     }
     setCurrentEmail(session.user.email ?? "");
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", session.user.id)
         .eq("role", "admin")
         .maybeSingle();
+      if (error && handleAuthError(error)) return;
       setIsAdmin(!!data);
       setCheckingRole(false);
     })();
-  }, [session, authLoading]);
+  }, [session, authLoading, handleAuthError]);
 
   const handleUpdateEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +65,7 @@ export default function AdminSettings() {
       }
       const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
       if (error) {
+        if (handleAuthError(error)) return;
         toast.error(error.message);
         return;
       }
@@ -71,6 +75,7 @@ export default function AdminSettings() {
       setPassword("");
       setNewEmail("");
     } catch (err: any) {
+      if (handleAuthError(err)) return;
       toast.error(err.message ?? "Failed to update email");
     } finally {
       setSaving(false);
