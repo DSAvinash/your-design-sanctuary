@@ -30,16 +30,17 @@ export default function AdminSettings() {
     }
     setCurrentEmail(session.user.email ?? "");
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", session.user.id)
         .eq("role", "admin")
         .maybeSingle();
+      if (error && handleAuthError(error)) return;
       setIsAdmin(!!data);
       setCheckingRole(false);
     })();
-  }, [session, authLoading]);
+  }, [session, authLoading, handleAuthError]);
 
   const handleUpdateEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +65,7 @@ export default function AdminSettings() {
       }
       const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
       if (error) {
+        if (handleAuthError(error)) return;
         toast.error(error.message);
         return;
       }
@@ -73,6 +75,7 @@ export default function AdminSettings() {
       setPassword("");
       setNewEmail("");
     } catch (err: any) {
+      if (handleAuthError(err)) return;
       toast.error(err.message ?? "Failed to update email");
     } finally {
       setSaving(false);
