@@ -63,19 +63,8 @@ export default function AdminSubscribers() {
     })();
   }, [isAdmin, handleAuthError]);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    (async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("newsletter_subscribers")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) toast.error(error.message);
-      else setSubscribers(data ?? []);
-      setLoading(false);
-    })();
-  }, [isAdmin]);
+
+
 
   const filtered = useMemo(
     () =>
