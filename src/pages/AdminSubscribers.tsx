@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminAuthGuard } from "@/lib/adminAuthGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +17,7 @@ interface Subscriber {
 
 export default function AdminSubscribers() {
   const { session, loading: authLoading } = useAuth();
+  const handleAuthError = useAdminAuthGuard();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -35,11 +37,31 @@ export default function AdminSubscribers() {
         .eq("user_id", session.user.id)
         .eq("role", "admin")
         .maybeSingle();
-      if (error) toast.error("Could not verify admin access");
+      if (error) {
+        if (handleAuthError(error)) return;
+        toast.error("Could not verify admin access");
+      }
       setIsAdmin(!!data);
       setCheckingRole(false);
     })();
-  }, [session, authLoading]);
+  }, [session, authLoading, handleAuthError]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("newsletter_subscribers")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) {
+        if (!handleAuthError(error)) toast.error(error.message);
+      } else {
+        setSubscribers(data ?? []);
+      }
+      setLoading(false);
+    })();
+  }, [isAdmin, handleAuthError]);
 
   useEffect(() => {
     if (!isAdmin) return;
