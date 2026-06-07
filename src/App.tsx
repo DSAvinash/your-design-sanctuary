@@ -14,6 +14,7 @@ import AdminLogin from "./pages/AdminLogin.tsx";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
 import AdminSettings from "./pages/AdminSettings.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import AdminRoute from "./components/AdminRoute";
 
 const queryClient = new QueryClient();
 
@@ -31,9 +32,9 @@ const App = () => (
             <Route path="/agro-assist" element={<AgroAssist />} />
             <Route path="/weather-forecast" element={<WeatherForecast />} />
             <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/subscribers" element={<AdminSubscribers />} />
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
+            <Route path="/admin/subscribers" element={<AdminRoute><AdminSubscribers /></AdminRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
