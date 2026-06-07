@@ -1,7 +1,14 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { requireAdmin, unauthorizedResponse, forbiddenResponse } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const { user, isAdmin } = await requireAdmin(req);
+  if (!user) return unauthorizedResponse(corsHeaders);
+  if (!isAdmin) return forbiddenResponse(corsHeaders);
+
+
 
   const key = Deno.env.get("OPENWEATHERMAP_API_KEY")?.trim();
   const json = (body: Record<string, unknown>, status = 200) =>
