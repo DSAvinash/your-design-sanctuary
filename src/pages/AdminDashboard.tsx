@@ -115,15 +115,15 @@ export default function AdminDashboard() {
         }
 
         setStats({
-          users: (usersRes as { count?: number }).count ?? 0,
-          subscribers: (subsRes as { count?: number }).count ?? 0,
-          events: (eventsRes as { count?: number }).count ?? 0,
-          forecastClicks: (forecastRes as { count?: number }).count ?? 0,
+          users: usersRes.count ?? 0,
+          subscribers: subsRes.count ?? 0,
+          events: eventsRes.count ?? 0,
+          forecastClicks: forecastRes.count ?? 0,
         });
-        setRecent((recentRes.data as RecentEvent[] | null) ?? []);
+        setRecent(recentRes.data ?? []);
 
         const counts = new Map<string, number>();
-        ((pagesRes.data as { page_path: string | null }[] | null) ?? []).forEach((r) => {
+        (pagesRes.data ?? []).forEach((r: { page_path: string | null }) => {
           if (!r.page_path) return;
           counts.set(r.page_path, (counts.get(r.page_path) ?? 0) + 1);
         });
