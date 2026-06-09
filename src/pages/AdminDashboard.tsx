@@ -59,20 +59,19 @@ export default function AdminDashboard() {
       return;
     }
     (async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (error) {
-        if (handleAuthError(error)) return;
-        toast.error("Could not verify admin access");
-      }
+      const { data, error } = await run(
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle(),
+      );
+      if (error && !isHandled(error)) toast.error("Could not verify admin access");
       setIsAdmin(!!data);
       setCheckingRole(false);
     })();
-  }, [session, authLoading, handleAuthError]);
+  }, [session, authLoading, run]);
 
   useEffect(() => {
     if (!isAdmin) return;
