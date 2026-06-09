@@ -13,7 +13,7 @@ import { ArrowLeft, Mail, Lock } from "lucide-react";
 
 export default function AdminSettings() {
   const { session, loading: authLoading } = useAuth();
-  const handleAuthError = useAdminAuthGuard();
+  const { run, auth, isAuthOrForbiddenError } = useAdminApi();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -30,17 +30,19 @@ export default function AdminSettings() {
     }
     setCurrentEmail(session.user.email ?? "");
     (async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (error && handleAuthError(error)) return;
+      const { data, error } = await run(
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle(),
+      );
+      if (error && isAuthOrForbiddenError(error)) return;
       setIsAdmin(!!data);
       setCheckingRole(false);
     })();
-  }, [session, authLoading, handleAuthError]);
+  }, [session, authLoading, run, isAuthOrForbiddenError]);
 
   const handleUpdateEmail = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,9 +65,9 @@ export default function AdminSettings() {
         toast.error("Password is incorrect");
         return;
       }
-      const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+      const { error } = await auth.updateUser({ email: newEmail.trim() });
       if (error) {
-        if (handleAuthError(error)) return;
+        if (isAuthOrForbiddenError(error)) return;
         toast.error(error.message);
         return;
       }
@@ -75,7 +77,7 @@ export default function AdminSettings() {
       setPassword("");
       setNewEmail("");
     } catch (err: any) {
-      if (handleAuthError(err)) return;
+      if (isAuthOrForbiddenError(err)) return;
       toast.error(err.message ?? "Failed to update email");
     } finally {
       setSaving(false);
