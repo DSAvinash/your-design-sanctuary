@@ -81,40 +81,49 @@ export default function AdminDashboard() {
       try {
         const [usersRes, subsRes, eventsRes, forecastRes, recentRes, pagesRes] =
           await Promise.all([
-            supabase.from("profiles").select("*", { count: "exact", head: true }),
-            supabase
+            run(supabase.from("profiles").select("*", { count: "exact", head: true })),
+            run(supabase
               .from("newsletter_subscribers")
-              .select("*", { count: "exact", head: true }),
-            supabase
+              .select("*", { count: "exact", head: true })),
+            run(supabase
               .from("analytics_events")
-              .select("*", { count: "exact", head: true }),
-            supabase
+              .select("*", { count: "exact", head: true })),
+            run(supabase
               .from("analytics_events")
               .select("*", { count: "exact", head: true })
-              .eq("event_type", "forecast_button_click"),
-            supabase
+              .eq("event_type", "forecast_button_click")),
+            run(supabase
               .from("analytics_events")
               .select("id,event_type,page_path,created_at")
               .order("created_at", { ascending: false })
-              .limit(8),
-            supabase
+              .limit(8)),
+            run(supabase
               .from("analytics_events")
               .select("page_path")
               .not("page_path", "is", null)
               .order("created_at", { ascending: false })
-              .limit(500),
+              .limit(500)),
           ]);
 
+        const firstError = [usersRes, subsRes, eventsRes, forecastRes, recentRes, pagesRes]
+          .map((r) => r.error)
+          .find(Boolean);
+        if (firstError) {
+          if (isAuthOrForbiddenError(firstError)) return;
+          toast.error((firstError as { message?: string }).message ?? "Failed to load dashboard");
+          return;
+        }
+
         setStats({
-          users: usersRes.count ?? 0,
-          subscribers: subsRes.count ?? 0,
-          events: eventsRes.count ?? 0,
-          forecastClicks: forecastRes.count ?? 0,
+          users: (usersRes as { count?: number }).count ?? 0,
+          subscribers: (subsRes as { count?: number }).count ?? 0,
+          events: (eventsRes as { count?: number }).count ?? 0,
+          forecastClicks: (forecastRes as { count?: number }).count ?? 0,
         });
-        setRecent(recentRes.data ?? []);
+        setRecent((recentRes.data as RecentEvent[] | null) ?? []);
 
         const counts = new Map<string, number>();
-        (pagesRes.data ?? []).forEach((r: { page_path: string | null }) => {
+        ((pagesRes.data as { page_path: string | null }[] | null) ?? []).forEach((r) => {
           if (!r.page_path) return;
           counts.set(r.page_path, (counts.get(r.page_path) ?? 0) + 1);
         });
@@ -124,14 +133,11 @@ export default function AdminDashboard() {
             .sort((a, b) => b.count - a.count)
             .slice(0, 5),
         );
-      } catch (err: any) {
-        if (handleAuthError(err)) return;
-        toast.error(err.message ?? "Failed to load dashboard");
       } finally {
         setLoading(false);
       }
     })();
-  }, [isAdmin, handleAuthError]);
+  }, [isAdmin, run]);
 
   if (authLoading || checkingRole) {
     return (
