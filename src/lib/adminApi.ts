@@ -1,10 +1,8 @@
 import { useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAuthGuard, isAuthOrForbiddenError } from "@/lib/adminAuthGuard";
-import type { PostgrestFilterBuilder, PostgrestBuilder } from "@supabase/postgrest-js";
 
 type SupabaseClient = typeof supabase;
-type AnyQuery = PromiseLike<{ data: unknown; error: unknown }>;
 
 /**
  * Single wrapper for admin-side API calls. Routes any 401/403 from
@@ -14,13 +12,12 @@ type AnyQuery = PromiseLike<{ data: unknown; error: unknown }>;
 export function useAdminApi() {
   const handleAuthError = useAdminAuthGuard();
 
+  // Run any Supabase query/builder; preserves all response fields (data, error, count, status).
   const run = useCallback(
-    async <T,>(query: PromiseLike<{ data: T; error: unknown }>): Promise<{ data: T | null; error: unknown }> => {
-      const { data, error } = await query;
-      if (error && handleAuthError(error)) {
-        return { data: null, error };
-      }
-      return { data, error };
+    async <R extends { error: unknown }>(query: PromiseLike<R>): Promise<R> => {
+      const result = await query;
+      if (result.error) handleAuthError(result.error);
+      return result;
     },
     [handleAuthError],
   );
@@ -29,12 +26,10 @@ export function useAdminApi() {
     async <T = unknown,>(
       fn: string,
       options?: Parameters<SupabaseClient["functions"]["invoke"]>[1],
-    ): Promise<{ data: T | null; error: unknown }> => {
-      const { data, error } = await supabase.functions.invoke<T>(fn, options);
-      if (error && handleAuthError(error)) {
-        return { data: null, error };
-      }
-      return { data: data ?? null, error };
+    ) => {
+      const result = await supabase.functions.invoke<T>(fn, options);
+      if (result.error) handleAuthError(result.error);
+      return result;
     },
     [handleAuthError],
   );
@@ -44,11 +39,9 @@ export function useAdminApi() {
       updateUser: async (
         attrs: Parameters<SupabaseClient["auth"]["updateUser"]>[0],
       ) => {
-        const { data, error } = await supabase.auth.updateUser(attrs);
-        if (error && handleAuthError(error)) {
-          return { data: null, error };
-        }
-        return { data, error };
+        const result = await supabase.auth.updateUser(attrs);
+        if (result.error) handleAuthError(result.error);
+        return result;
       },
     }),
     [handleAuthError],
