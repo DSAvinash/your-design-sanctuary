@@ -68,7 +68,7 @@ export default function AdminDashboard() {
           .eq("role", "admin")
           .maybeSingle(),
       );
-      if (error && !isHandled(error)) toast.error("Could not verify admin access");
+      if (error && !isAuthOrForbiddenError(error)) toast.error("Could not verify admin access");
       setIsAdmin(!!data);
       setCheckingRole(false);
     })();
