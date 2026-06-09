@@ -39,7 +39,7 @@ interface TopPage {
 
 export default function AdminDashboard() {
   const { session, loading: authLoading, signOut } = useAuth();
-  const handleAuthError = useAdminAuthGuard();
+  const { run } = useAdminApi();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
