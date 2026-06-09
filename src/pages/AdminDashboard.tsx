@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAdminAuthGuard } from "@/lib/adminAuthGuard";
+import { useAdminApi } from "@/lib/adminApi";
+import { isAuthOrForbiddenError } from "@/lib/adminAuthGuard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,7 +40,7 @@ interface TopPage {
 
 export default function AdminDashboard() {
   const { session, loading: authLoading, signOut } = useAuth();
-  const handleAuthError = useAdminAuthGuard();
+  const { run } = useAdminApi();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -59,20 +60,19 @@ export default function AdminDashboard() {
       return;
     }
     (async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (error) {
-        if (handleAuthError(error)) return;
-        toast.error("Could not verify admin access");
-      }
+      const { data, error } = await run(
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle(),
+      );
+      if (error && !isAuthOrForbiddenError(error)) toast.error("Could not verify admin access");
       setIsAdmin(!!data);
       setCheckingRole(false);
     })();
-  }, [session, authLoading, handleAuthError]);
+  }, [session, authLoading, run]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -81,29 +81,38 @@ export default function AdminDashboard() {
       try {
         const [usersRes, subsRes, eventsRes, forecastRes, recentRes, pagesRes] =
           await Promise.all([
-            supabase.from("profiles").select("*", { count: "exact", head: true }),
-            supabase
+            run(supabase.from("profiles").select("*", { count: "exact", head: true })),
+            run(supabase
               .from("newsletter_subscribers")
-              .select("*", { count: "exact", head: true }),
-            supabase
+              .select("*", { count: "exact", head: true })),
+            run(supabase
               .from("analytics_events")
-              .select("*", { count: "exact", head: true }),
-            supabase
+              .select("*", { count: "exact", head: true })),
+            run(supabase
               .from("analytics_events")
               .select("*", { count: "exact", head: true })
-              .eq("event_type", "forecast_button_click"),
-            supabase
+              .eq("event_type", "forecast_button_click")),
+            run(supabase
               .from("analytics_events")
               .select("id,event_type,page_path,created_at")
               .order("created_at", { ascending: false })
-              .limit(8),
-            supabase
+              .limit(8)),
+            run(supabase
               .from("analytics_events")
               .select("page_path")
               .not("page_path", "is", null)
               .order("created_at", { ascending: false })
-              .limit(500),
+              .limit(500)),
           ]);
+
+        const firstError = [usersRes, subsRes, eventsRes, forecastRes, recentRes, pagesRes]
+          .map((r) => r.error)
+          .find(Boolean);
+        if (firstError) {
+          if (isAuthOrForbiddenError(firstError)) return;
+          toast.error((firstError as { message?: string }).message ?? "Failed to load dashboard");
+          return;
+        }
 
         setStats({
           users: usersRes.count ?? 0,
@@ -124,14 +133,11 @@ export default function AdminDashboard() {
             .sort((a, b) => b.count - a.count)
             .slice(0, 5),
         );
-      } catch (err: any) {
-        if (handleAuthError(err)) return;
-        toast.error(err.message ?? "Failed to load dashboard");
       } finally {
         setLoading(false);
       }
     })();
-  }, [isAdmin, handleAuthError]);
+  }, [isAdmin, run]);
 
   if (authLoading || checkingRole) {
     return (

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAdminAuthGuard } from "@/lib/adminAuthGuard";
+import { useAdminApi } from "@/lib/adminApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,7 +17,7 @@ interface Subscriber {
 
 export default function AdminSubscribers() {
   const { session, loading: authLoading } = useAuth();
-  const handleAuthError = useAdminAuthGuard();
+  const { run } = useAdminApi();
   const [checkingRole, setCheckingRole] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -31,37 +31,41 @@ export default function AdminSubscribers() {
       return;
     }
     (async () => {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
+      const { data, error } = await run(
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle(),
+      );
       if (error) {
-        if (handleAuthError(error)) return;
+        // run() already routes 401/403; only surface other errors
         toast.error("Could not verify admin access");
       }
       setIsAdmin(!!data);
       setCheckingRole(false);
     })();
-  }, [session, authLoading, handleAuthError]);
+  }, [session, authLoading, run]);
 
   useEffect(() => {
     if (!isAdmin) return;
     (async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("newsletter_subscribers")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await run(
+        supabase
+          .from("newsletter_subscribers")
+          .select("*")
+          .order("created_at", { ascending: false }),
+      );
       if (error) {
-        if (!handleAuthError(error)) toast.error(error.message);
+        toast.error(error.message);
       } else {
         setSubscribers(data ?? []);
       }
       setLoading(false);
     })();
-  }, [isAdmin, handleAuthError]);
+  }, [isAdmin, run]);
 
 
 
