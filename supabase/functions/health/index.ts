@@ -86,10 +86,12 @@ serve(async (req) => {
   else status = "healthy";
 
   // Public response — top-level status only, no internal details.
+  // Always return 200 so the app can render a graceful banner instead of the
+  // preview/runtime treating a health probe as an application crash.
   return new Response(
     JSON.stringify({ status, timestamp: new Date().toISOString() }),
     {
-      status: status === "unhealthy" ? 503 : 200,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     },
   );
