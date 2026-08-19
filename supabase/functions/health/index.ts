@@ -53,23 +53,19 @@ serve(async (req) => {
   }
 
   try {
-    // Lightweight connectivity check that doesn't depend on a specific table existing.
-    const { error } = await supabase.rpc("version" as never).then(
-      (r) => r,
-      () => ({ error: null as never }),
-    );
-    // Fallback: simple auth admin ping confirms DB connectivity via GoTrue.
+    // Simple connectivity check against a real table.
+    const { error } = await supabase
+      .from("newsletter_subscribers")
+      .select("id", { count: "exact", head: true });
     if (error) {
-      const { error: usersError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1 });
-      if (usersError) {
-        console.error("health: db check failed", usersError.message);
-        dbOk = false;
-      }
+      console.error("health: db check failed", error.message);
+      dbOk = false;
     }
   } catch (e) {
     console.error("health: db check threw", e);
     dbOk = false;
   }
+
 
   for (const fn of EDGE_FUNCTIONS) {
     try {
