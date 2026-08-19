@@ -70,11 +70,14 @@ serve(async (req) => {
   for (const fn of EDGE_FUNCTIONS) {
     try {
       const r = await fetch(`${supabaseUrl}/functions/v1/${fn}`, { method: "OPTIONS" });
-      if (r.status === 200 || r.status === 204) edgeHealthy++;
+      // Any HTTP response means the function is deployed and reachable;
+      // auth-protected functions can legitimately answer 401/403/405.
+      if (r.status < 500) edgeHealthy++;
     } catch (e) {
       console.error(`health: edge ${fn} unreachable`, e);
     }
   }
+
 
   let status: SimpleStatus;
   if (!dbOk) status = "unhealthy";
