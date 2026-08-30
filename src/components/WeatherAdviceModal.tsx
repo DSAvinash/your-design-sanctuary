@@ -5,9 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { FunctionsHttpError } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { CROPS } from "@/lib/cropKnowledge";
+import {
+  getWeatherAdvice,
+  type WeatherAdviceResponse,
+  type RiskLevel,
+} from "@/lib/weatherAdvice";
 import {
   Loader2,
   MapPin,
@@ -19,33 +22,12 @@ import {
   Thermometer,
 } from "lucide-react";
 
-type RiskLevel = "low" | "medium" | "high";
 type Step = "intake" | "loading" | "result";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   language: string;
-}
-
-interface WeatherAdviceResponse {
-  error?: string;
-  location: string;
-  crop: string | null;
-  growthStage: string | null;
-  weather: {
-    temperatureC: number | null;
-    humidity: number | null;
-    windKph: number | null;
-    rainNext24hMm: number;
-    rainNext72hMm: number;
-    rainProbabilityNext24h: number;
-    description: string;
-  };
-  irrigation: { action: "delay" | "irrigate" | "monitor"; reason: string; nextWindow: string };
-  diseaseRisk: { level: RiskLevel; reason: string; likely: string[]; actions: string[] };
-  scouting: string[];
-  aiBrief?: string | null;
 }
 
 const riskColor: Record<RiskLevel, string> = {
@@ -89,44 +71,35 @@ export default function WeatherAdviceModal({ open, onOpenChange, language }: Pro
   };
 
   const submit = async () => {
-    if (!coords.lat || !coords.lon) {
-      // try to parse "lat,lon" out of the typed location
+    let lat = coords.lat;
+    let lon = coords.lon;
+
+    if (!lat || !lon) {
       const m = locationName.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
       if (m) {
-        setCoords({ lat: parseFloat(m[1]), lon: parseFloat(m[2]) });
+        lat = parseFloat(m[1]);
+        lon = parseFloat(m[2]);
+        setCoords({ lat, lon });
       } else {
         toast({
           title: "Location required",
-          description: "Tap GPS or enter coordinates as lat,lon",
+          description: "Tap GPS or enter coordinates as lat,lon (e.g. 12.97, 77.59)",
           variant: "destructive",
         });
         return;
       }
     }
+
     setStep("loading");
     try {
-      const { data, error } = await supabase.functions.invoke("weather-advice", {
-        body: {
-          crop: crop.trim() || undefined,
-          growthStage: growthStage.trim() || undefined,
-          location: { ...coords, name: locationName.trim() || undefined },
-          language,
-        },
+      const payload = await getWeatherAdvice({
+        lat,
+        lon,
+        name: locationName.trim() || undefined,
+        crop: crop.trim() || undefined,
+        growthStage: growthStage.trim() || undefined,
+        language,
       });
-
-      let payload: WeatherAdviceResponse | null = (data as WeatherAdviceResponse | null) ?? null;
-      if (error) {
-        if (error instanceof FunctionsHttpError && error.context) {
-          try {
-            const body = await error.context.json();
-            if (body && typeof body === "object") payload = body as WeatherAdviceResponse;
-          } catch {
-            /* ignore */
-          }
-        }
-        if (!payload) throw error instanceof Error ? error : new Error(String(error));
-      }
-      if (!payload) throw new Error("Empty response from server");
 
       if (payload.error) {
         toast({ title: "Weather advice failed", description: payload.error, variant: "destructive" });

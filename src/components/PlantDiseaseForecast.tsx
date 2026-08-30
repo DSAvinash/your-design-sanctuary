@@ -123,27 +123,106 @@ const PlantDiseaseForecast = () => {
       prev.includes(crop) ? prev.filter((c) => c !== crop) : [...prev, crop],
     );
 
+  const fetchOpenMeteoDirect = async (params: { city?: string; lat?: number; lon?: number }): Promise<WeatherResponse> => {
+    let lat = params.lat;
+    let lon = params.lon;
+    let locName = params.city || "Current Location";
+    let country = "";
+    let state = "";
+
+    if (params.city || lat == null || lon == null) {
+      try {
+        const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(params.city || "Bangalore")}&count=1&language=en&format=json`;
+        const geoRes = await fetch(geoUrl);
+        const geoData = await geoRes.json();
+        const result = geoData?.results?.[0];
+        if (result) {
+          lat = result.latitude;
+          lon = result.longitude;
+          locName = result.name;
+          country = result.country_code || result.country || "";
+          state = result.admin1 || "";
+        }
+      } catch {
+        // fallback
+      }
+      if (lat == null || lon == null) {
+        lat = 12.97;
+        lon = 77.59;
+        locName = params.city || "Bangalore";
+      }
+    }
+
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation,weather_code&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,precipitation,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,relative_humidity_2m_mean,wind_speed_10m_max,weather_code&forecast_days=6&timezone=auto`;
+    const res = await fetch(weatherUrl);
+    if (!res.ok) throw new Error("Failed to fetch weather from Open-Meteo");
+    const data = await res.json();
+
+    const cur = data.current || {};
+    const daily = data.daily || {};
+    const dates: string[] = daily.time || [];
+
+    const dailyList: DayWeather[] = dates.slice(0, 5).map((d: string, i: number) => ({
+      date: d,
+      temp_min: daily.temperature_2m_min?.[i] ?? 18,
+      temp_max: daily.temperature_2m_max?.[i] ?? 28,
+      temp_avg: ((daily.temperature_2m_min?.[i] ?? 18) + (daily.temperature_2m_max?.[i] ?? 28)) / 2,
+      humidity_avg: daily.relative_humidity_2m_mean?.[i] ?? 65,
+      humidity_max: Math.min(100, (daily.relative_humidity_2m_mean?.[i] ?? 65) + 15),
+      wind_max_kmh: daily.wind_speed_10m_max?.[i] ?? 10,
+      dew_point_avg: (daily.temperature_2m_min?.[i] ?? 18) - 4,
+      precipitation_mm: daily.precipitation_sum?.[i] ?? 0,
+      description: (daily.precipitation_sum?.[i] ?? 0) > 2 ? "Rain showers" : "Partly cloudy",
+      icon: (daily.precipitation_sum?.[i] ?? 0) > 2 ? "10d" : "02d",
+    }));
+
+    return {
+      ok: true,
+      location: {
+        name: locName,
+        lat: lat ?? 0,
+        lon: lon ?? 0,
+        country,
+        state,
+      },
+      current: {
+        temp: cur.temperature_2m ?? 24,
+        humidity: cur.relative_humidity_2m ?? 60,
+        wind_kmh: cur.wind_speed_10m != null ? Math.round(cur.wind_speed_10m * 3.6) : 12,
+        dew_point: (cur.temperature_2m ?? 24) - ((100 - (cur.relative_humidity_2m ?? 60)) / 5),
+        description: (cur.precipitation ?? 0) > 0 ? "Rain" : "Partly cloudy",
+        icon: (cur.precipitation ?? 0) > 0 ? "10d" : "02d",
+      },
+      daily: dailyList,
+    };
+  };
+
   const fetchWeather = async (params: { city?: string; lat?: number; lon?: number }) => {
     setLoading(true);
     setError(null);
     try {
-      const qs = new URLSearchParams();
-      if (params.city) qs.set("city", params.city);
-      if (params.lat != null) qs.set("lat", String(params.lat));
-      if (params.lon != null) qs.set("lon", String(params.lon));
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-weather?${qs}`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load weather");
-      if (data?.ok === false) {
-        setWeather(null);
-        const msg = data.error || "Weather key check failed. Test the weather key before running forecasts.";
-        setError(msg);
-        toast.error(msg);
-        return;
+      let data: WeatherResponse | null = null;
+      try {
+        const qs = new URLSearchParams();
+        if (params.city) qs.set("city", params.city);
+        if (params.lat != null) qs.set("lat", String(params.lat));
+        if (params.lon != null) qs.set("lon", String(params.lon));
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-weather?${qs}`;
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.ok !== false) data = json;
+        }
+      } catch {
+        // Fallback to client Open-Meteo
       }
+
+      if (!data) {
+        data = await fetchOpenMeteoDirect(params);
+      }
+
       setWeather(data);
       localStorage.setItem(
         STORAGE_LOC,

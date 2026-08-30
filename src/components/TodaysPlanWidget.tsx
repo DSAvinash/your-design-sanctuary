@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { FunctionsHttpError } from "@supabase/supabase-js";
 import { loadScans } from "@/lib/diagnosis";
+import { getUnifiedAdvisory, type UnifiedAdvisoryResponse as AdvisoryResponse, type RiskLevel } from "@/lib/weatherAdvice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -23,29 +22,7 @@ import {
   Phone,
 } from "lucide-react";
 
-type RiskLevel = "low" | "medium" | "high";
 type IrrigationAction = "delay" | "irrigate" | "monitor";
-
-interface AdvisoryResponse {
-  error?: string;
-  message?: string;
-  location: string;
-  crop: string | null;
-  disease: string | null;
-  severity: string | null;
-  weather: {
-    temperatureC: number | null;
-    humidity: number | null;
-    windKph: number | null;
-    rainNext24hMm: number;
-    rainProbabilityNext24h: number;
-  };
-  irrigation: { action: IrrigationAction; reason: string };
-  diseaseRisk: { level: RiskLevel; reasons: string[] };
-  actions: string[];
-  aiBrief: string | null;
-  generatedAt: number;
-}
 
 const COORDS_KEY = "agrovision.todaysplan.coords";
 
@@ -63,6 +40,7 @@ const irrigationColor: Record<IrrigationAction, string> = {
 export default function TodaysPlanWidget() {
   const latestScan = useMemo(() => loadScans()[0] ?? null, []);
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(() => {
+    if (typeof window === "undefined") return null;
     try {
       const raw = localStorage.getItem(COORDS_KEY);
       return raw ? JSON.parse(raw) : null;
@@ -90,23 +68,13 @@ export default function TodaysPlanWidget() {
           }
         : null;
 
-      const { data: res, error } = await supabase.functions.invoke("unified-advisory", {
-        body: { location: { ...c }, latestScan: scanPayload, language: "en" },
+      const payload = await getUnifiedAdvisory({
+        lat: c.lat,
+        lon: c.lon,
+        latestScan: scanPayload,
+        language: "en",
       });
 
-      let payload: AdvisoryResponse | null = (res as AdvisoryResponse | null) ?? null;
-      if (error) {
-        if (error instanceof FunctionsHttpError && error.context) {
-          try {
-            const b = await error.context.json();
-            if (b && typeof b === "object") payload = b as AdvisoryResponse;
-          } catch {
-            /* */
-          }
-        }
-        if (!payload) throw error;
-      }
-      if (!payload) throw new Error("Empty response");
       if (payload.error) {
         setErrorMsg(payload.message ?? payload.error);
         setData(null);
@@ -189,8 +157,6 @@ export default function TodaysPlanWidget() {
     const subject = encodeURIComponent("AgroVision — Today's Plan");
     const isMobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     return {
-      // wa.me redirects desktop browsers to api.whatsapp.com which blocks iframe embedding.
-      // web.whatsapp.com works directly on desktop; wa.me is best on mobile.
       whatsapp: isMobile
         ? `https://wa.me/?text=${encoded}`
         : `https://web.whatsapp.com/send?text=${encoded}`,
