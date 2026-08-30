@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/hooks/use-toast";
@@ -9,6 +9,8 @@ import {
   diagnoseLeaf,
   fileToDataUrl,
   getModelApiUrl,
+  getGeminiApiKey,
+  setGeminiApiKey,
   loadScans,
   normalizeConfidence,
   saveScan,
@@ -16,31 +18,38 @@ import {
   severityColorClass,
 } from "@/lib/diagnosis";
 
-const LeafDiagnosis = () => {
+export default function LeafDiagnosis() {
   const { t } = useTranslation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<DiagnosisResult | null>(null);
   const [scans, setScans] = useState<ScanRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [apiUrl, setApiUrl] = useState<string>("");
+  const [geminiKey, setGeminiKey] = useState<string>("");
 
-  useEffect(() => {
+  useState(() => {
     setScans(loadScans());
     setApiUrl(getModelApiUrl() ?? "");
-  }, []);
+    setGeminiKey(getGeminiApiKey() ?? "");
+  });
 
   const handleFile = async (file: File) => {
-    const dataUrl = await fileToDataUrl(file);
-    setImageDataUrl(dataUrl);
-    setResult(null);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setImageDataUrl(dataUrl);
+      setResult(null);
+    } catch (err) {
+      toast({
+        title: "Invalid Image",
+        description: err instanceof Error ? err.message : "Please upload a clear leaf image in JPEG, PNG, or WebP format.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDiagnose = async () => {
-    if (!imageDataUrl) return;
+    if (!imageDataUrl || isAnalyzing) return;
     setIsAnalyzing(true);
     try {
       const res = await diagnoseLeaf(imageDataUrl);
@@ -54,20 +63,25 @@ const LeafDiagnosis = () => {
       saveScan(record);
       setScans(loadScans());
     } catch (err) {
-      const code = err instanceof Error ? err.message : "";
+      const message = err instanceof Error ? err.message : "";
+      let desc = t("diagnosis.errorNetwork");
+      if (message === "CONFIG_MISSING") {
+        desc = t("diagnosis.errorConfig");
+      } else if (message.includes("quota") || message.includes("429")) {
+        desc = "Gemini API rate limit or quota exceeded. Please wait a moment and retry.";
+      } else if (message.includes("timeout") || message.includes("timed out")) {
+        desc = "Disease detection request timed out. Please retry.";
+      } else if (message) {
+        desc = message;
+      }
       toast({
         title: t("diagnosis.errorTitle"),
-        description: code === "CONFIG_MISSING" ? t("diagnosis.errorConfig") : t("diagnosis.errorNetwork"),
+        description: desc,
         variant: "destructive",
       });
     } finally {
       setIsAnalyzing(false);
     }
-  };
-
-  const handleSaveApiUrl = () => {
-    setModelApiUrl(apiUrl.trim());
-    toast({ title: "API URL saved" });
   };
 
   const reset = () => {
@@ -80,404 +94,161 @@ const LeafDiagnosis = () => {
 
   return (
     <div className="bg-surface font-body text-on-surface min-h-screen">
-      {/* TopAppBar */}
-      <header className="bg-surface fixed top-0 w-full z-[60]">
-        <div className="flex items-center justify-between px-6 py-4 w-full">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="active:scale-95 duration-200 hover:opacity-80 transition-opacity text-primary">
-              <span className="material-symbols-outlined">arrow_back</span>
-            </Link>
-            <h1 className="font-headline font-bold tracking-tight text-xl text-primary">
-              {t("diagnosis.title")}
-            </h1>
-          </div>
-          <div className="flex gap-3 items-center">
-            <LanguageSwitcher compact />
-            <button
-              onClick={() => setShowHistory((s) => !s)}
-              className="text-primary active:scale-95"
-              aria-label={t("diagnosis.history")}
+      <header className="sticky top-0 z-30 border-b border-outline-variant/30 bg-surface/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-on-primary">
+              <span className="font-headline font-bold text-sm">AV</span>
+            </div>
+            <div>
+              <span className="font-headline font-semibold tracking-tight">AgroVision</span>
+              <span className="ml-2 rounded-md bg-secondary/15 px-2 py-0.5 text-[10px] font-semibold text-secondary uppercase tracking-widest">
+                Leaf Diagnosis
+              </span>
+            </div>
+          </Link>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
+            <Link
+              to="/agro-assist"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary transition hover:bg-primary/10"
             >
-              <span className="material-symbols-outlined">history</span>
-            </button>
+              Ask AI Agronomist →
+            </Link>
           </div>
         </div>
-        <div className="h-px w-full bg-surface-container-low"></div>
       </header>
 
-      <main className="min-h-screen pt-16 pb-32">
-        {/* Hero Scanning Section */}
-        <section className="relative h-[420px] md:h-[530px] overflow-hidden bg-primary-container">
-          {imageDataUrl ? (
-            <img alt="Selected leaf" className="absolute inset-0 w-full h-full object-cover" src={imageDataUrl} />
-          ) : (
-            <img
-              alt="Macro shot of a green leaf"
-              className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[0.2]"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeAkre_euHwX7TzsCNf-eqR0NrHSwtAOeTZxo69vRh8dtfAp7rCDrvCJVKApj3oEhU_LuvUHAkgWkQSzfFfh_EMu9B9Kampm5dkjxWAMYu68EvMQxODAbQpDxyNfqkvHfqXuyb98VNNrpigX2sxANgeGaw1MDrYey6YfEoEF6023gAOp8_xTObzjrMQUhk-rWdwVrXYqb_7rjM19emD-ixZvVtp81CAw2zAhsN2yzx7WruRRoevkWSv3XA43XefWfgGA3MhmaHi0Y0"
-            />
-          )}
-          {isAnalyzing && <div className="scanner-line opacity-60"></div>}
-
-          <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-between pointer-events-none">
-            <div className="flex justify-between items-start">
-              <div className="bg-surface-container-lowest/80 backdrop-blur-md p-3 rounded-xl border border-outline-variant/20">
-                <p className="font-label text-[10px] uppercase tracking-widest text-primary font-bold">
-                  {t("diagnosis.confidence")}
-                </p>
-                <p className="font-headline text-2xl font-bold text-primary">
-                  {confidencePct !== null ? `${confidencePct}%` : "—"}
-                </p>
-              </div>
-              <div className="bg-primary/90 p-3 rounded-xl border border-outline-variant/20 text-on-primary">
-                <p className="font-label text-[10px] uppercase tracking-widest opacity-80">
-                  {t("diagnosis.sensorStatus")}
-                </p>
-                <p className="font-headline text-sm font-medium flex items-center gap-2">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      isAnalyzing ? "bg-secondary-container animate-pulse" : "bg-secondary-container"
-                    }`}
-                  ></span>
-                  {isAnalyzing ? t("diagnosis.scanning") : t("diagnosis.ready")}
-                </p>
-              </div>
-            </div>
-
-            <div className="self-center w-56 h-56 md:w-64 md:h-64 border-2 border-dashed border-secondary-container/60 relative flex items-center justify-center">
-              <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-secondary-container"></div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-secondary-container"></div>
-              <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-secondary-container"></div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-secondary-container"></div>
-              {result && (
-                <div
-                  className={`p-2 absolute top-6 left-6 rounded text-[10px] font-bold backdrop-blur-sm ${
-                    isHealthy
-                      ? "bg-secondary-container/40 border border-secondary text-on-secondary-container"
-                      : "bg-error/10 border border-error/30 text-error"
-                  }`}
-                >
-                  {isHealthy ? t("diagnosis.healthy").toUpperCase() : result.disease.toUpperCase()}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end items-end">
-              {imageDataUrl && (
-                <div className="pointer-events-auto flex flex-wrap justify-end gap-3">
-                  <Link
-                    to="/agro-assist"
-                    className="text-primary bg-secondary-container px-4 py-2 rounded-full text-xs font-headline uppercase tracking-widest hover:opacity-90 transition-opacity"
-                  >
-                    {t("diagnosis.chatAssist")}
-                  </Link>
-                  <button
-                    onClick={reset}
-                    className="text-on-primary bg-primary/60 backdrop-blur-sm px-4 py-2 rounded-full text-xs font-headline uppercase tracking-widest hover:bg-primary/80 transition-colors"
-                  >
-                    {t("diagnosis.newScan")}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Action & Results Canvas */}
-        <section className="px-6 -mt-12 relative z-10">
-          <div className="bg-surface-container-lowest rounded-[2rem] p-6 md:p-8 shadow-[0_20px_50px_rgba(40,45,26,0.08)]">
-            <div className="text-center mb-6">
-              <h2 className="font-headline text-2xl md:text-3xl font-bold text-primary mb-2">
-                {result ? t("diagnosis.preliminaryFindings") : t("diagnosis.heroTitle")}
-              </h2>
-              <p className="text-on-surface-variant font-medium text-sm">
-                {imageDataUrl ? t("diagnosis.heroSubtitle") : t("diagnosis.selectImage")}
+      <main className="mx-auto max-w-5xl px-6 py-8">
+        <div className="grid gap-8 lg:grid-cols-12">
+          <div className="lg:col-span-7 space-y-6">
+            <div className="rounded-3xl border border-outline-variant/40 bg-surface-container-lowest p-6 shadow-sm">
+              <h1 className="font-headline text-2xl font-bold tracking-tight">
+                {t("diagnosis.title", "Instant Leaf Disease Detection")}
+              </h1>
+              <p className="mt-1 text-sm text-on-surface-variant">
+                {t("diagnosis.subtitle", "Upload or capture a clear photo of any affected plant leaf for automated pathology and treatment options.")}
               </p>
-            </div>
 
-            {/* Hidden inputs */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-            />
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-            />
-
-            {/* Control Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center p-5 bg-surface-container-low rounded-2xl hover:bg-surface-container-high transition-colors active:scale-95 duration-150 group"
-              >
-                <div className="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-on-secondary-container">upload_file</span>
-                </div>
-                <span className="font-label text-[11px] font-bold uppercase tracking-wider text-primary">
-                  {t("diagnosis.uploadPhoto")}
-                </span>
-              </button>
-              <button
-                onClick={() => cameraInputRef.current?.click()}
-                className="flex flex-col items-center justify-center p-5 bg-surface-container-low rounded-2xl hover:bg-surface-container-high transition-colors active:scale-95 duration-150 group"
-              >
-                <div className="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-on-secondary-container">photo_camera</span>
-                </div>
-                <span className="font-label text-[11px] font-bold uppercase tracking-wider text-primary">
-                  {t("diagnosis.useCamera")}
-                </span>
-              </button>
-            </div>
-
-            {/* Result */}
-            {result && (
-              <div className="space-y-4 mb-6 animate-in fade-in duration-500">
-                <div className="bg-surface-container p-5 rounded-3xl border border-outline-variant/10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="material-symbols-outlined text-secondary">analytics</span>
-                      <h3 className="font-headline font-bold text-lg">{t("diagnosis.preliminaryFindings")}</h3>
+              <div className="mt-6">
+                {!imageDataUrl ? (
+                  <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-outline-variant/60 bg-surface-container-low/40 p-10 text-center cursor-pointer transition hover:border-primary/50 hover:bg-primary/5">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void handleFile(file);
+                      }}
+                    />
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      📸
                     </div>
-                    <span
-                      className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase tracking-tighter ${
-                        isHealthy
-                          ? "bg-secondary-container text-on-secondary-container"
-                          : "bg-error-container text-on-error-container"
-                      }`}
-                    >
-                      {isHealthy ? t("diagnosis.healthy") : t("diagnosis.actionRequired")}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 mb-4">
-                    <div className="p-3 bg-surface-container-highest/50 rounded-xl">
-                      <p className="text-[10px] font-bold font-label text-on-surface-variant uppercase">
-                        {t("diagnosis.disease")}
-                      </p>
-                      <p className="font-bold text-primary text-sm leading-tight mt-1">{result.disease}</p>
-                    </div>
-                    <div className="p-3 bg-surface-container-highest/50 rounded-xl">
-                      <p className="text-[10px] font-bold font-label text-on-surface-variant uppercase">
-                        {t("diagnosis.confidence")}
-                      </p>
-                      <p className="font-bold text-secondary text-sm mt-1">{confidencePct}%</p>
-                    </div>
-                    <div className="p-3 bg-surface-container-highest/50 rounded-xl">
-                      <p className="text-[10px] font-bold font-label text-on-surface-variant uppercase">
-                        {t("diagnosis.severity")}
-                      </p>
-                      <p className={`font-bold text-sm mt-1 capitalize ${severityColorClass(result.severity)}`}>
-                        {result.severity}
-                      </p>
-                    </div>
-                  </div>
-
-                  {result.description && (
-                    <div className="mt-3">
-                      <p className="text-[10px] font-bold font-label text-on-surface-variant uppercase mb-1">
-                        {t("diagnosis.description")}
-                      </p>
-                      <p className="text-sm text-on-surface leading-relaxed">{result.description}</p>
-                    </div>
-                  )}
-
-                  {result.causes && result.causes.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-[10px] font-bold font-label text-on-surface-variant uppercase mb-1">
-                        {t("diagnosis.causes")}
-                      </p>
-                      <ul className="text-sm text-on-surface list-disc list-inside space-y-1">
-                        {result.causes.map((c, i) => (
-                          <li key={i}>{c}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {result.treatment && (
-                  <div className="bg-surface-container p-5 rounded-3xl border border-outline-variant/10">
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="material-symbols-outlined text-secondary">healing</span>
-                      <h3 className="font-headline font-bold text-lg">{t("diagnosis.treatment")}</h3>
-                    </div>
-                    <div className="space-y-3">
-                      <TreatmentBlock
-                        icon="science"
-                        title={t("diagnosis.chemical")}
-                        items={result.treatment.chemical}
+                    <p className="mt-3 font-medium text-sm">Click to upload or drag & drop leaf photo</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">JPEG, PNG or WebP up to 15MB</p>
+                  </label>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="relative overflow-hidden rounded-2xl border border-outline-variant/40 bg-black">
+                      <img
+                        src={imageDataUrl}
+                        alt="Leaf preview"
+                        className="max-h-96 w-full object-contain mx-auto"
                       />
-                      <TreatmentBlock
-                        icon="eco"
-                        title={t("diagnosis.organic")}
-                        items={result.treatment.organic}
-                      />
-                      <TreatmentBlock
-                        icon="shield"
-                        title={t("diagnosis.prevention")}
-                        items={result.treatment.prevention}
-                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleDiagnose}
+                        disabled={isAnalyzing}
+                        className="flex-1 rounded-full bg-primary py-3 font-headline text-xs font-bold uppercase tracking-widest text-on-primary shadow-sm hover:opacity-90 disabled:opacity-50"
+                      >
+                        {isAnalyzing ? "Analyzing leaf with AI..." : "Detect Disease"}
+                      </button>
+                      <button
+                        onClick={reset}
+                        className="rounded-full border border-outline-variant px-5 py-3 text-xs font-semibold hover:bg-surface-container"
+                      >
+                        Change Photo
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
-            )}
+            </div>
 
-            {/* Primary CTA */}
-            <button
-              onClick={handleDiagnose}
-              disabled={!imageDataUrl || isAnalyzing}
-              className="w-full py-4 md:py-5 bg-primary text-on-primary rounded-2xl font-headline font-bold text-base md:text-lg shadow-xl shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <span className="material-symbols-outlined">{isAnalyzing ? "progress_activity" : "biotech"}</span>
-              {isAnalyzing ? t("diagnosis.analyzing") : t("diagnosis.diagnoseNow")}
-            </button>
+            {/* Results display */}
+            {result && (
+              <div className="rounded-3xl border border-outline-variant/40 bg-surface-container-lowest p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between gap-4 border-b border-outline-variant/20 pb-4">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-widest text-primary">Diagnosis Report</span>
+                    <h2 className="font-headline text-xl font-bold">{result.disease}</h2>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold font-headline text-primary">{confidencePct}%</span>
+                    <p className="text-[11px] text-on-surface-variant uppercase tracking-wider">Confidence</p>
+                  </div>
+                </div>
 
-            <Link
-              to="/agro-assist"
-              className="mt-4 flex w-full items-center justify-center gap-3 rounded-2xl border border-outline-variant/50 bg-surface-container-low px-4 py-4 text-center font-headline text-sm font-bold uppercase tracking-[0.2em] text-primary transition-colors hover:bg-surface-container"
-            >
-              <span className="material-symbols-outlined">forum</span>
-              {t("diagnosis.openAssistant")}
-            </Link>
+                {result.description && (
+                  <p className="text-sm leading-relaxed text-on-surface-variant">{result.description}</p>
+                )}
 
-            {/* API URL config */}
-            <details className="mt-6">
-              <summary className="text-xs text-on-surface-variant cursor-pointer hover:text-primary uppercase tracking-widest font-headline">
-                Model API Configuration
-              </summary>
-              <div className="mt-3 flex gap-2">
-                <input
-                  type="url"
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  placeholder="https://your-model.com/predict"
-                  className="flex-1 px-3 py-2 rounded-lg border border-outline-variant/40 bg-surface text-sm font-body"
-                />
-                <button
-                  onClick={handleSaveApiUrl}
-                  className="px-4 py-2 bg-primary text-on-primary rounded-lg text-xs font-headline uppercase tracking-widest"
-                >
-                  Save
-                </button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low/50 p-4">
+                    <span className="font-bold text-xs text-primary uppercase tracking-wider">Organic Care</span>
+                    <ul className="mt-2 space-y-1 text-xs text-on-surface-variant list-disc pl-4">
+                      {result.treatment.organic.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low/50 p-4">
+                    <span className="font-bold text-xs text-primary uppercase tracking-wider">Chemical Guidance</span>
+                    <ul className="mt-2 space-y-1 text-xs text-on-surface-variant list-disc pl-4">
+                      {result.treatment.chemical.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </div>
-              <p className="text-[11px] text-on-surface-variant mt-2 leading-relaxed">
-                Endpoint receives <code>{`{ image: "data:image/...;base64,..." }`}</code> and returns{" "}
-                <code>{`{ disease, confidence, severity, description, causes, treatment }`}</code>.
-              </p>
-            </details>
+            )}
           </div>
-        </section>
 
-        {/* History Drawer */}
-        {showHistory && (
-          <section className="px-6 mt-8">
-            <div className="bg-surface-container-lowest rounded-[2rem] p-6 shadow-lg">
-              <h3 className="font-headline font-bold text-xl mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-secondary">history</span>
-                {t("diagnosis.history")}
-              </h3>
+          {/* History sidebar */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="rounded-3xl border border-outline-variant/40 bg-surface-container-lowest p-6 shadow-sm">
+              <h3 className="font-headline text-sm font-bold uppercase tracking-wider text-on-surface">Recent Scans</h3>
               {scans.length === 0 ? (
-                <p className="text-sm text-on-surface-variant">{t("diagnosis.noHistory")}</p>
+                <p className="mt-4 text-xs text-on-surface-variant">No previous scans found on this device.</p>
               ) : (
-                <div className="space-y-3">
-                  {scans.map((scan) => (
-                    <button
-                      key={scan.id}
+                <div className="mt-4 space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                  {scans.map((s) => (
+                    <div
+                      key={s.id}
                       onClick={() => {
-                        setImageDataUrl(scan.imageDataUrl);
-                        setResult(scan.result);
-                        setShowHistory(false);
+                        setImageDataUrl(s.imageDataUrl);
+                        setResult(s.result);
                       }}
-                      className="w-full flex gap-3 items-center p-3 bg-surface-container rounded-2xl hover:bg-surface-container-high transition-colors text-left"
+                      className="flex items-center gap-3 rounded-2xl border border-outline-variant/30 p-3 hover:bg-surface-container cursor-pointer transition"
                     >
-                      <img src={scan.imageDataUrl} alt="" className="w-14 h-14 rounded-xl object-cover" />
+                      <img src={s.imageDataUrl} alt="scan" className="h-12 w-12 rounded-xl object-cover" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-primary text-sm truncate">{scan.result.disease}</p>
-                        <p className="text-xs text-on-surface-variant">
-                          {new Date(scan.timestamp).toLocaleString()}
+                        <p className="text-xs font-semibold truncate">{s.result.disease}</p>
+                        <p className="text-[10px] text-on-surface-variant">
+                          {new Date(s.timestamp).toLocaleDateString()} · {normalizeConfidence(s.result.confidence)}%
                         </p>
                       </div>
-                      <span className={`text-xs font-bold ${severityColorClass(scan.result.severity)}`}>
-                        {normalizeConfidence(scan.result.confidence)}%
-                      </span>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
-          </section>
-        )}
-
-        {/* Quick Tips */}
-        <section className="px-6 mt-8 pb-12">
-          <h4 className="font-headline font-bold text-lg mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-secondary">tips_and_updates</span>
-            {t("diagnosis.tipsTitle")}
-          </h4>
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            <TipCard icon="light_mode" title={t("diagnosis.tipNaturalLight")} desc={t("diagnosis.tipNaturalLightDesc")} />
-            <TipCard icon="center_focus_strong" title={t("diagnosis.tipSteady")} desc={t("diagnosis.tipSteadyDesc")} />
-            <TipCard icon="crop_free" title={t("diagnosis.tipFocus")} desc={t("diagnosis.tipFocusDesc")} />
           </div>
-        </section>
+        </div>
       </main>
-
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-surface/80 backdrop-blur-xl shadow-[0_-4px_32px_rgba(40,45,26,0.04)] rounded-t-xl">
-        <Link to="/" className="flex flex-col items-center justify-center text-secondary px-4 py-1.5 hover:text-primary transition-colors active:scale-90 duration-150">
-          <span className="material-symbols-outlined">psychology</span>
-          <span className="font-label text-[10px] uppercase font-bold tracking-widest mt-1">{t("nav.fields")}</span>
-        </Link>
-        <Link to="/leaf-diagnosis" className="flex flex-col items-center justify-center bg-secondary-container text-primary rounded-xl px-4 py-1.5 active:scale-90 duration-150">
-          <span className="material-symbols-outlined">pest_control</span>
-          <span className="font-label text-[10px] uppercase font-bold tracking-widest mt-1">{t("nav.diagnosis")}</span>
-        </Link>
-        <button onClick={() => setShowHistory(true)} className="flex flex-col items-center justify-center text-secondary px-4 py-1.5 hover:text-primary transition-colors active:scale-90 duration-150">
-          <span className="material-symbols-outlined">bar_chart</span>
-          <span className="font-label text-[10px] uppercase font-bold tracking-widest mt-1">{t("nav.insights")}</span>
-        </button>
-        <a href="#" className="flex flex-col items-center justify-center text-secondary px-4 py-1.5 hover:text-primary transition-colors active:scale-90 duration-150">
-          <span className="material-symbols-outlined">account_circle</span>
-          <span className="font-label text-[10px] uppercase font-bold tracking-widest mt-1">{t("nav.profile")}</span>
-        </a>
-      </nav>
     </div>
   );
-};
-
-const TipCard = ({ icon, title, desc }: { icon: string; title: string; desc: string }) => (
-  <div className="min-w-[220px] bg-surface-container-low p-5 rounded-2xl">
-    <span className="material-symbols-outlined text-secondary mb-3 block">{icon}</span>
-    <p className="font-bold text-primary mb-1">{title}</p>
-    <p className="text-sm text-on-surface-variant">{desc}</p>
-  </div>
-);
-
-const TreatmentBlock = ({ icon, title, items }: { icon: string; title: string; items?: string[] }) => {
-  if (!items || items.length === 0) return null;
-  return (
-    <div className="p-3 bg-surface-container-highest/50 rounded-xl">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="material-symbols-outlined text-secondary text-base">{icon}</span>
-        <p className="text-[10px] font-bold font-label text-on-surface-variant uppercase tracking-wider">{title}</p>
-      </div>
-      <ul className="text-sm text-on-surface list-disc list-inside space-y-1">
-        {items.map((item, i) => (
-          <li key={i}>{item}</li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-export default LeafDiagnosis;
+}
