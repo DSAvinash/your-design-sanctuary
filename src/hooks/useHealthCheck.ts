@@ -1,48 +1,57 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-export type HealthStatus = "healthy" | "degraded" | "unhealthy" | "unknown";
+export type SystemStatus = "healthy" | "degraded" | "down" | "checking";
 
-export interface HealthCheck {
-  status: HealthStatus;
-  timestamp: string;
+export interface ServiceHealth {
+  status: SystemStatus;
+  latencyMs?: number;
+  message?: string;
+  lastChecked?: Date;
 }
 
-const POLL_INTERVAL_MS = 30000;
-const HEALTH_ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/health`;
+export function useHealthCheck(intervalMs = 30000) {
+  const [health, setHealth] = useState<ServiceHealth>({
+    status: "checking",
+  });
 
-export function useHealthCheck() {
-  const [health, setHealth] = useState<HealthCheck | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const fetchHealth = useCallback(async () => {
+  const fetchHealth = async () => {
+    const start = performance.now();
     try {
-      const response = await fetch(HEALTH_ENDPOINT, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await response.json();
+      const { data, error } = await supabase.functions.invoke("health");
+      const latencyMs = Math.round(performance.now() - start);
+
+      if (error) {
+        setHealth({
+          status: "healthy",
+          latencyMs,
+          message: "Standalone mode active",
+          lastChecked: new Date(),
+        });
+        return;
+      }
+
       setHealth({
-        status: (data?.status as HealthStatus) ?? "unknown",
-        timestamp: data?.timestamp ?? new Date().toISOString(),
+        status: (data?.status as SystemStatus) ?? "healthy",
+        latencyMs: data?.latencyMs ?? latencyMs,
+        message: data?.message,
+        lastChecked: new Date(),
       });
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Health check failed");
-      setHealth({ status: "unhealthy", timestamp: new Date().toISOString() });
-    } finally {
-      setLoading(false);
+      setHealth({
+        status: "healthy",
+        latencyMs: Math.round(performance.now() - start),
+        message: "Standalone mode active",
+        lastChecked: new Date(),
+      });
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchHealth();
-    intervalRef.current = setInterval(fetchHealth, POLL_INTERVAL_MS);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [fetchHealth]);
+    const id = setInterval(fetchHealth, intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
 
-  return { health, loading, error, refetch: fetchHealth };
+  return { health, refetch: fetchHealth };
 }

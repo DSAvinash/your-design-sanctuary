@@ -30,16 +30,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.warn("Session recovery failed, continuing as guest:", err);
+        setSession(null);
+        setLoading(false);
+      });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn("SignOut exception:", err);
+    } finally {
+      setSession(null);
+    }
   };
 
   return (
