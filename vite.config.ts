@@ -19,4 +19,25 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-ui": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-slot",
+            "lucide-react",
+            "clsx",
+            "tailwind-merge",
+          ],
+          "vendor-query": ["@tanstack/react-query"],
+          "vendor-supabase": ["@supabase/supabase-js"],
+        },
+      },
+    },
+  },
 }));
