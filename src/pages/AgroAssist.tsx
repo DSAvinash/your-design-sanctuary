@@ -456,19 +456,32 @@ const AgroAssist = () => {
                     <span className="block font-semibold">{t("assistant.provider")}</span>
                     <select
                       value={settings.provider}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const val = event.target.value as "gemini" | "openai" | "ollama";
                         setSettings((current) => ({
                           ...current,
-                          provider: event.target.value === "ollama" ? "ollama" : "openai",
+                          provider: val,
                           baseUrl:
-                            event.target.value === "ollama"
+                            val === "ollama"
                               ? "http://localhost:11434"
-                              : "https://api.openai.com/v1",
-                          apiKey: event.target.value === "ollama" ? "" : current.apiKey,
-                        }))
-                      }
+                              : val === "openai"
+                                ? "https://api.openai.com/v1"
+                                : "",
+                          model:
+                            val === "gemini"
+                              ? "gemini-3.5-flash"
+                              : val === "ollama"
+                                ? "llama3.1"
+                                : "gpt-4o-mini",
+                          apiKey:
+                            val === "gemini"
+                              ? current.apiKey || (import.meta.env.VITE_GEMINI_API_KEY as string | undefined) || ""
+                              : current.apiKey,
+                        }));
+                      }}
                       className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-3"
                     >
+                      <option value="gemini">Google Gemini (Recommended)</option>
                       <option value="openai">{t("assistant.providerOpenAi")}</option>
                       <option value="ollama">{t("assistant.providerOllama")}</option>
                     </select>
@@ -480,31 +493,41 @@ const AgroAssist = () => {
                       type="text"
                       value={settings.model}
                       onChange={(event) => setSettings((current) => ({ ...current, model: event.target.value }))}
-                      placeholder={settings.provider === "ollama" ? "llama3.1" : "gpt-4o-mini"}
+                      placeholder={
+                        settings.provider === "gemini"
+                          ? "gemini-3.5-flash"
+                          : settings.provider === "ollama"
+                            ? "llama3.1"
+                            : "gpt-4o-mini"
+                      }
                       className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-3"
                     />
                   </label>
                 </div>
 
-                <label className="space-y-2 text-sm text-on-surface">
-                  <span className="block font-semibold">{t("assistant.baseUrl")}</span>
-                  <input
-                    type="url"
-                    value={settings.baseUrl}
-                    onChange={(event) => setSettings((current) => ({ ...current, baseUrl: event.target.value }))}
-                    placeholder={settings.provider === "ollama" ? "http://localhost:11434" : "https://api.openai.com/v1"}
-                    className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-3"
-                  />
-                </label>
-
-                {settings.provider === "openai" && (
+                {settings.provider !== "gemini" && (
                   <label className="space-y-2 text-sm text-on-surface">
-                    <span className="block font-semibold">{t("assistant.apiKey")}</span>
+                    <span className="block font-semibold">{t("assistant.baseUrl")}</span>
+                    <input
+                      type="url"
+                      value={settings.baseUrl}
+                      onChange={(event) => setSettings((current) => ({ ...current, baseUrl: event.target.value }))}
+                      placeholder={settings.provider === "ollama" ? "http://localhost:11434" : "https://api.openai.com/v1"}
+                      className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-3"
+                    />
+                  </label>
+                )}
+
+                {(settings.provider === "openai" || settings.provider === "gemini") && (
+                  <label className="space-y-2 text-sm text-on-surface">
+                    <span className="block font-semibold">
+                      {settings.provider === "gemini" ? "Gemini API Key" : t("assistant.apiKey")}
+                    </span>
                     <input
                       type="password"
                       value={settings.apiKey}
                       onChange={(event) => setSettings((current) => ({ ...current, apiKey: event.target.value }))}
-                      placeholder="sk-..."
+                      placeholder={settings.provider === "gemini" ? "AQ..." : "sk-..."}
                       className="w-full rounded-xl border border-outline-variant/40 bg-surface px-3 py-3"
                     />
                   </label>

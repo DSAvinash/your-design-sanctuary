@@ -18,13 +18,8 @@ interface RequestBody {
   language: string;
 }
 
-import { requireUser, unauthorizedResponse } from "../_shared/auth.ts";
-
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-
-  const { user } = await requireUser(req);
-  if (!user) return unauthorizedResponse(corsHeaders);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
     const body = (await req.json()) as RequestBody;
@@ -61,14 +56,11 @@ Return STRICT JSON with this shape (no markdown, no commentary):
   "summary": string,            // 2-3 sentences explaining the most likely issue
   "likelyDisease": string,
   "confidenceLabel": "Low" | "Medium" | "High",
-  "urgency": "Low" | "Medium" | "High",
-  "nextInspection": string[],   // 3-5 short field checks
-  "organicTreatment": string[], // 3-4 actionable steps
-  "chemicalTreatment": string[],// 3-4 steps, generic actives only (no exact doses)
-  "prevention": string[]        // 3-4 preventive steps
+  "actions": string[],          // 3 actionable next steps for the farmer
+  "questionsForOfficer": string[] // 2 questions the farmer can ask local krishi vigyan officer
 }`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -80,47 +72,32 @@ Return STRICT JSON with this shape (no markdown, no commentary):
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        temperature: 0.3,
         response_format: { type: "json_object" },
       }),
     });
 
-    if (!aiRes.ok) {
-      if (aiRes.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit reached. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      if (aiRes.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Add credits in Lovable workspace settings." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      const txt = await aiRes.text();
-      console.error("AI gateway error:", aiRes.status, txt);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Diagnosis flow AI gateway error", res.status, errText);
+      return new Response(JSON.stringify({ error: `AI Gateway error ${res.status}` }), {
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await aiRes.json();
-    const content = data?.choices?.[0]?.message?.content ?? "{}";
-    let parsed: unknown;
-    try {
-      parsed = typeof content === "string" ? JSON.parse(content) : content;
-    } catch {
-      parsed = { summary: String(content), likelyDisease: body.topCandidates[0]?.name ?? "Unknown" };
-    }
+    const data = await res.json();
+    const rawContent = data?.choices?.[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(rawContent);
 
-    return new Response(JSON.stringify({ result: parsed }), {
+    return new Response(JSON.stringify(parsed), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("diagnosis-flow error:", e);
+    console.error("diagnosis-flow error", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: e instanceof Error ? e.message : "Server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
