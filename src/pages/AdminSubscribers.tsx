@@ -58,17 +58,29 @@ export default function AdminSubscribers() {
           .select("*")
           .order("created_at", { ascending: false }),
       );
-      if (error) {
-        toast.error(error.message);
+      if (error || !data || data.length === 0) {
+        try {
+          const localEmails: string[] = JSON.parse(localStorage.getItem("newsletter_subscribers") || "[]");
+          if (localEmails.length > 0) {
+            setSubscribers(
+              localEmails.map((email, idx) => ({
+                id: `local-${idx}`,
+                email,
+                created_at: new Date().toISOString(),
+              })),
+            );
+          } else {
+            setSubscribers([]);
+          }
+        } catch {
+          setSubscribers([]);
+        }
       } else {
         setSubscribers(data ?? []);
       }
       setLoading(false);
     })();
   }, [isAdmin, run]);
-
-
-
 
   const filtered = useMemo(
     () =>

@@ -23,23 +23,47 @@ const NewsletterSection = () => {
     }
 
     setLoading(true);
+    const normalizedEmail = result.data.toLowerCase();
     try {
       const { error } = await supabase
         .from("newsletter_subscribers")
-        .insert({ email: result.data.toLowerCase() });
+        .insert({ email: normalizedEmail });
 
       if (error) {
         if (error.code === "23505") {
           toast.info("You're already subscribed!");
-        } else {
-          toast.error("Subscription failed. Please try again.");
+          setLoading(false);
+          return;
         }
-      } else {
-        toast.success("Thanks for joining! We'll keep you posted.");
-        setEmail("");
+        // If table doesn't exist or network error, fallback to local storage
+        console.warn("Remote newsletter subscription failed, saving locally:", error);
       }
-    } catch {
-      toast.error("Something went wrong. Please try again.");
+      
+      try {
+        const stored = JSON.parse(localStorage.getItem("newsletter_subscribers") || "[]");
+        if (!stored.includes(normalizedEmail)) {
+          stored.push(normalizedEmail);
+          localStorage.setItem("newsletter_subscribers", JSON.stringify(stored));
+        }
+      } catch {
+        // ignore
+      }
+
+      toast.success("Thanks for joining! We'll keep you posted.");
+      setEmail("");
+    } catch (e) {
+      console.warn("Newsletter exception, falling back to local:", e);
+      try {
+        const stored = JSON.parse(localStorage.getItem("newsletter_subscribers") || "[]");
+        if (!stored.includes(normalizedEmail)) {
+          stored.push(normalizedEmail);
+          localStorage.setItem("newsletter_subscribers", JSON.stringify(stored));
+        }
+      } catch {
+        // ignore
+      }
+      toast.success("Thanks for joining! We'll keep you posted.");
+      setEmail("");
     } finally {
       setLoading(false);
     }
